@@ -1,1 +1,1 @@
-# -mhddos_proxy_innosetup
+# mhddos_proxy_portable
