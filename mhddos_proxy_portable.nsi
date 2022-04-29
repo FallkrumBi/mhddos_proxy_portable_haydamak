@@ -8,9 +8,6 @@
 
 ;--------------------------------
 ;General
-  !addincludedir "./plugin"
-  !include "DotNetChecker.nsh"
-  !include "VcRedistChecker.nsh"
 
   ;Properly display all languages
   Unicode true
@@ -29,6 +26,8 @@
   !define PYTHON_DIR "$INSTDIR\python"
   
   !define GIT_DIR "$INSTDIR\git"
+  
+  !define VCREDIST_DIR "$INSTDIR\vc_redist"
 
   ;Define the main name of the installer
   Name "${PRODUCT}"
@@ -114,6 +113,24 @@
 ;--------------------------------
 ;Installer Section
 
+Section ;InstallVCRedist
+	SetOutPath ${VCREDIST_DIR}
+
+	${If} ${RunningX64}
+		File /r "requirements\vc_redist\VC_redist.x64.exe"
+	${Else}
+		File /r "requirements\vc_redist\VC_redist.x86.exe"
+	${EndIf}  
+
+	${If} ${RunningX64}
+		ExecWait 'VC_redist.x64.exe /q /norestart' $0
+		DetailPrint "-- VC_redist.x64.exe runtime exit code = '$0'"
+	${Else}
+		ExecWait 'VC_redist.x86.exe /q /norestart' $0
+		DetailPrint "-- VC_redist.x86.exe runtime exit code = '$0'"
+	${EndIf}
+SectionEnd
+
 Section "mhddos_proxy"
   SectionIn RO # Just means if in component mode this is locked
 
@@ -178,10 +195,20 @@ Section
   SetOutPath $INSTDIR
   
   FileOpen $9 runer.bat w
+  FileWrite $9 "@echo off$\r$\n"
   FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
   FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "color 0A$\r$\n"
+  FileWrite $9 "echo Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "echo ============================$\r$\n"
   FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "echo$\r$\n"
+  FileWrite $9 "echo Cheack requirements$\r$\n"
+  FileWrite $9 "echo ============================$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "echo$\r$\n"
+  FileWrite $9 "echo Start Attak ItArmy Target$\r$\n"
+  FileWrite $9 "echo ============================$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
   FileClose $9
 
