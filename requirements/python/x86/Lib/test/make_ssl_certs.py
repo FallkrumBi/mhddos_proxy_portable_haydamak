@@ -7,9 +7,6 @@ import shutil
 import tempfile
 from subprocess import *
 
-startdate = "20180829142316Z"
-enddate = "20371028142316Z"
-
 req_template = """
     [ default ]
     base_url               = http://testca.pythontest.net/testca
@@ -23,8 +20,6 @@ req_template = """
     L                      = Castle Anthrax
     O                      = Python Software Foundation
     CN                     = {hostname}
-
-    [req_x509_extensions_nosan]
 
     [req_x509_extensions_simple]
     subjectAltName         = @san
@@ -75,12 +70,8 @@ req_template = """
     database  = $dir/index.txt
     crlnumber = $dir/crl.txt
     default_md = sha256
-    startdate = {startdate}
-    default_startdate = {startdate}
-    enddate = {enddate}
-    default_enddate = {enddate}
-    default_days = 7000
-    default_crl_days = 7000
+    default_days = 3600
+    default_crl_days = 3600
     certificate = pycacert.pem
     private_key = pycakey.pem
     serial    = $dir/serial
@@ -125,15 +116,10 @@ def make_cert_key(hostname, sign=False, extra_san='',
             tempnames.append(f.name)
     req_file, cert_file, key_file = tempnames
     try:
-        req = req_template.format(
-            hostname=hostname,
-            extra_san=extra_san,
-            startdate=startdate,
-            enddate=enddate
-        )
+        req = req_template.format(hostname=hostname, extra_san=extra_san)
         with open(req_file, 'w') as f:
             f.write(req)
-        args = ['req', '-new', '-nodes', '-days', '7000',
+        args = ['req', '-new', '-days', '3650', '-nodes',
                 '-newkey', key, '-keyout', key_file,
                 '-extensions', ext,
                 '-config', req_file]
@@ -182,30 +168,19 @@ def make_ca():
         f.write("00")
     with open(os.path.join('cadir','index.txt.attr'),'w+') as f:
         f.write('unique_subject = no')
-    # random start value for serial numbers
-    with open(os.path.join('cadir','serial'), 'w') as f:
-        f.write('CB2D80995A69525B\n')
 
     with tempfile.NamedTemporaryFile("w") as t:
-        req = req_template.format(
-            hostname='our-ca-server',
-            extra_san='',
-            startdate=startdate,
-            enddate=enddate
-        )
-        t.write(req)
+        t.write(req_template.format(hostname='our-ca-server', extra_san=''))
         t.flush()
         with tempfile.NamedTemporaryFile() as f:
-            args = ['req', '-config', t.name, '-new',
-                    '-nodes',
-                    '-newkey', 'rsa:3072',
-                    '-keyout', 'pycakey.pem',
+            args = ['req', '-new', '-days', '3650', '-extensions', 'v3_ca', '-nodes',
+                    '-newkey', 'rsa:3072', '-keyout', 'pycakey.pem',
                     '-out', f.name,
                     '-subj', '/C=XY/L=Castle Anthrax/O=Python Software Foundation CA/CN=our-ca-server']
             check_call(['openssl'] + args)
-            args = ['ca', '-config', t.name,
+            args = ['ca', '-config', t.name, '-create_serial',
                     '-out', 'pycacert.pem', '-batch', '-outdir', TMP_CADIR,
-                    '-keyfile', 'pycakey.pem',
+                    '-keyfile', 'pycakey.pem', '-days', '3650',
                     '-selfsign', '-extensions', 'v3_ca', '-infiles', f.name ]
             check_call(['openssl'] + args)
             args = ['ca', '-config', t.name, '-gencrl', '-out', 'revocation.crl']
@@ -248,18 +223,18 @@ if __name__ == '__main__':
         f.write(key)
         f.write(cert)
 
-    cert, key = make_cert_key('localhost', sign=True)
+    cert, key = make_cert_key('localhost', True)
     with open('keycert3.pem', 'w') as f:
         f.write(key)
         f.write(cert)
 
-    cert, key = make_cert_key('fakehostname', sign=True)
+    cert, key = make_cert_key('fakehostname', True)
     with open('keycert4.pem', 'w') as f:
         f.write(key)
         f.write(cert)
 
     cert, key = make_cert_key(
-        'localhost-ecc', sign=True, key='param:secp384r1.pem'
+        'localhost-ecc', True, key='param:secp384r1.pem'
     )
     with open('keycertecc.pem', 'w') as f:
         f.write(key)
@@ -279,7 +254,7 @@ if __name__ == '__main__':
         'RID.1 = 1.2.3.4.5',
     ]
 
-    cert, key = make_cert_key('allsans', sign=True, extra_san='\n'.join(extra_san))
+    cert, key = make_cert_key('allsans', extra_san='\n'.join(extra_san))
     with open('allsans.pem', 'w') as f:
         f.write(key)
         f.write(cert)
@@ -296,13 +271,8 @@ if __name__ == '__main__':
     ]
 
     # IDN SANS, signed
-    cert, key = make_cert_key('idnsans', sign=True, extra_san='\n'.join(extra_san))
+    cert, key = make_cert_key('idnsans', True, extra_san='\n'.join(extra_san))
     with open('idnsans.pem', 'w') as f:
-        f.write(key)
-        f.write(cert)
-
-    cert, key = make_cert_key('nosan', sign=True, ext='req_x509_extensions_nosan')
-    with open('nosan.pem', 'w') as f:
         f.write(key)
         f.write(cert)
 

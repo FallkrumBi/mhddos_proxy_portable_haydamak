@@ -4,10 +4,6 @@ import unittest
 from test.test_asyncio import functional as func_tests
 
 
-def tearDownModule():
-    asyncio.set_event_loop_policy(None)
-
-
 class ReceiveStuffProto(asyncio.BufferedProtocol):
     def __init__(self, cb, con_lost_fut):
         self.cb = cb
@@ -64,7 +60,7 @@ class BaseTestBufferedProtocol(func_tests.FunctionalTestCaseMixin):
 
         addr = srv.sockets[0].getsockname()
         self.loop.run_until_complete(
-            asyncio.wait_for(client(addr), 5))
+            asyncio.wait_for(client(addr), 5, loop=self.loop))
 
         srv.close()
         self.loop.run_until_complete(srv.wait_closed())

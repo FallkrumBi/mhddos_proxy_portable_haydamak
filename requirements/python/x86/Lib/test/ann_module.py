@@ -6,7 +6,6 @@ Empty lines above are for good reason (testing for correct line numbers)
 """
 
 from typing import Optional
-from functools import wraps
 
 __annotations__[1] = 2
 
@@ -52,11 +51,3 @@ def foo(x: int = 10):
     def bar(y: List[str]):
         x: str = 'yes'
     bar()
-
-def dec(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-u: int | float

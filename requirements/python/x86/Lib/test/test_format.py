@@ -1,7 +1,6 @@
 from test.support import verbose, TestFailed
 import locale
 import sys
-import re
 import test.support as support
 import unittest
 
@@ -49,7 +48,7 @@ def testformat(formatstr, args, output=None, limit=None, overflowok=False):
 
 def testcommon(formatstr, args, output=None, limit=None, overflowok=False):
     # if formatstr is a str, test str, bytes, and bytearray;
-    # otherwise, test bytes and bytearray
+    # otherwise, test bytes and bytearry
     if isinstance(formatstr, str):
         testformat(formatstr, args, output, limit, overflowok)
         b_format = formatstr.encode('ascii')
@@ -249,7 +248,7 @@ class FormatTest(unittest.TestCase):
         # base marker shouldn't change the size
         testcommon("%0#35.33o", big, "0o012345670123456701234567012345670")
 
-        # Some small ints, in both Python int and flavors.
+        # Some small ints, in both Python int and flavors).
         testcommon("%d", 42, "42")
         testcommon("%d", -42, "-42")
         testcommon("%d", 42.0, "42")
@@ -275,9 +274,9 @@ class FormatTest(unittest.TestCase):
         test_exc_common('% %s', 1, ValueError,
                         "unsupported format character '%' (0x25) at index 2")
         test_exc_common('%d', '1', TypeError,
-                        "%d format: a real number is required, not str")
+                        "%d format: a number is required, not str")
         test_exc_common('%d', b'1', TypeError,
-                        "%d format: a real number is required, not bytes")
+                        "%d format: a number is required, not bytes")
         test_exc_common('%x', '1', TypeError,
                         "%x format: an integer is required, not str")
         test_exc_common('%x', 3.14, TypeError,
@@ -428,16 +427,13 @@ class FormatTest(unittest.TestCase):
             localeconv = locale.localeconv()
             sep = localeconv['thousands_sep']
             point = localeconv['decimal_point']
-            grouping = localeconv['grouping']
 
             text = format(123456789, "n")
-            if grouping:
-                self.assertIn(sep, text)
+            self.assertIn(sep, text)
             self.assertEqual(text.replace(sep, ''), '123456789')
 
             text = format(1234.5, "n")
-            if grouping:
-                self.assertIn(sep, text)
+            self.assertIn(sep, text)
             self.assertIn(point, text)
             self.assertEqual(text.replace(sep, ''), '1234' + point + '5')
         finally:
@@ -488,36 +484,6 @@ class FormatTest(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             format(c, ".%sf" % (INT_MAX + 1))
 
-    def test_g_format_has_no_trailing_zeros(self):
-        # regression test for bugs.python.org/issue40780
-        self.assertEqual("%.3g" % 1505.0, "1.5e+03")
-        self.assertEqual("%#.3g" % 1505.0, "1.50e+03")
-
-        self.assertEqual(format(1505.0, ".3g"), "1.5e+03")
-        self.assertEqual(format(1505.0, "#.3g"), "1.50e+03")
-
-        self.assertEqual(format(12300050.0, ".6g"), "1.23e+07")
-        self.assertEqual(format(12300050.0, "#.6g"), "1.23000e+07")
-
-    def test_with_two_commas_in_format_specifier(self):
-        error_msg = re.escape("Cannot specify ',' with ','.")
-        with self.assertRaisesRegex(ValueError, error_msg):
-            '{:,,}'.format(1)
-
-    def test_with_two_underscore_in_format_specifier(self):
-        error_msg = re.escape("Cannot specify '_' with '_'.")
-        with self.assertRaisesRegex(ValueError, error_msg):
-            '{:__}'.format(1)
-
-    def test_with_a_commas_and_an_underscore_in_format_specifier(self):
-        error_msg = re.escape("Cannot specify both ',' and '_'.")
-        with self.assertRaisesRegex(ValueError, error_msg):
-            '{:,_}'.format(1)
-
-    def test_with_an_underscore_and_a_comma_in_format_specifier(self):
-        error_msg = re.escape("Cannot specify both ',' and '_'.")
-        with self.assertRaisesRegex(ValueError, error_msg):
-            '{:_,}'.format(1)
 
 if __name__ == "__main__":
     unittest.main()

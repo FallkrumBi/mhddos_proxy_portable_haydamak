@@ -1,7 +1,9 @@
 # Common tests for test_tkinter/test_widgets.py and test_ttk/test_widgets.py
 
 import unittest
+import sys
 import tkinter
+from tkinter.ttk import Scale
 from tkinter.test.support import (AbstractTkTest, tcl_version, requires_tcl,
                                   get_tk_patchlevel, pixels_conv, tcl_obj_eq)
 import test.support
@@ -61,9 +63,11 @@ class AbstractWidgetTest(AbstractTkTest):
             eq = tcl_obj_eq
         self.assertEqual2(widget[name], expected, eq=eq)
         self.assertEqual2(widget.cget(name), expected, eq=eq)
-        t = widget.configure(name)
-        self.assertEqual(len(t), 5)
-        self.assertEqual2(t[4], expected, eq=eq)
+        # XXX
+        if not isinstance(widget, Scale):
+            t = widget.configure(name)
+            self.assertEqual(len(t), 5)
+            self.assertEqual2(t[4], expected, eq=eq)
 
     def checkInvalidParam(self, widget, name, value, errmsg=None, *,
                           keep_orig=True):
@@ -205,7 +209,9 @@ class AbstractWidgetTest(AbstractTkTest):
     def test_keys(self):
         widget = self.create()
         keys = widget.keys()
-        self.assertEqual(sorted(keys), sorted(widget.configure()))
+        # XXX
+        if not isinstance(widget, Scale):
+            self.assertEqual(sorted(keys), sorted(widget.configure()))
         for k in keys:
             widget[k]
         # Test if OPTIONS contains all keys
@@ -242,31 +248,31 @@ class StandardOptionsTests:
         'underline', 'wraplength', 'xscrollcommand', 'yscrollcommand',
     )
 
-    def test_configure_activebackground(self):
+    def test_activebackground(self):
         widget = self.create()
         self.checkColorParam(widget, 'activebackground')
 
-    def test_configure_activeborderwidth(self):
+    def test_activeborderwidth(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'activeborderwidth',
                               0, 1.3, 2.9, 6, -2, '10p')
 
-    def test_configure_activeforeground(self):
+    def test_activeforeground(self):
         widget = self.create()
         self.checkColorParam(widget, 'activeforeground')
 
-    def test_configure_anchor(self):
+    def test_anchor(self):
         widget = self.create()
         self.checkEnumParam(widget, 'anchor',
                 'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw', 'center')
 
-    def test_configure_background(self):
+    def test_background(self):
         widget = self.create()
         self.checkColorParam(widget, 'background')
         if 'bg' in self.OPTIONS:
             self.checkColorParam(widget, 'bg')
 
-    def test_configure_bitmap(self):
+    def test_bitmap(self):
         widget = self.create()
         self.checkParam(widget, 'bitmap', 'questhead')
         self.checkParam(widget, 'bitmap', 'gray50')
@@ -279,88 +285,90 @@ class StandardOptionsTests:
             self.checkInvalidParam(widget, 'bitmap', 'spam',
                     errmsg='bitmap "spam" not defined')
 
-    def test_configure_borderwidth(self):
+    def test_borderwidth(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'borderwidth',
                               0, 1.3, 2.6, 6, -2, '10p')
         if 'bd' in self.OPTIONS:
             self.checkPixelsParam(widget, 'bd', 0, 1.3, 2.6, 6, -2, '10p')
 
-    def test_configure_compound(self):
+    def test_compound(self):
         widget = self.create()
         self.checkEnumParam(widget, 'compound',
                 'bottom', 'center', 'left', 'none', 'right', 'top')
 
-    def test_configure_cursor(self):
+    def test_cursor(self):
         widget = self.create()
         self.checkCursorParam(widget, 'cursor')
 
-    def test_configure_disabledforeground(self):
+    def test_disabledforeground(self):
         widget = self.create()
         self.checkColorParam(widget, 'disabledforeground')
 
-    def test_configure_exportselection(self):
+    def test_exportselection(self):
         widget = self.create()
         self.checkBooleanParam(widget, 'exportselection')
 
-    def test_configure_font(self):
+    def test_font(self):
         widget = self.create()
         self.checkParam(widget, 'font',
                         '-Adobe-Helvetica-Medium-R-Normal--*-120-*-*-*-*-*-*')
         self.checkInvalidParam(widget, 'font', '',
                                errmsg='font "" doesn\'t exist')
 
-    def test_configure_foreground(self):
+    def test_foreground(self):
         widget = self.create()
         self.checkColorParam(widget, 'foreground')
         if 'fg' in self.OPTIONS:
             self.checkColorParam(widget, 'fg')
 
-    def test_configure_highlightbackground(self):
+    def test_highlightbackground(self):
         widget = self.create()
         self.checkColorParam(widget, 'highlightbackground')
 
-    def test_configure_highlightcolor(self):
+    def test_highlightcolor(self):
         widget = self.create()
         self.checkColorParam(widget, 'highlightcolor')
 
-    def test_configure_highlightthickness(self):
+    def test_highlightthickness(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'highlightthickness',
                               0, 1.3, 2.6, 6, '10p')
         self.checkParam(widget, 'highlightthickness', -2, expected=0,
                         conv=self._conv_pixels)
 
-    def test_configure_image(self):
+    @unittest.skipIf(sys.platform == 'darwin',
+                     'crashes with Cocoa Tk (issue19733)')
+    def test_image(self):
         widget = self.create()
         self.checkImageParam(widget, 'image')
 
-    def test_configure_insertbackground(self):
+    def test_insertbackground(self):
         widget = self.create()
         self.checkColorParam(widget, 'insertbackground')
 
-    def test_configure_insertborderwidth(self):
+    def test_insertborderwidth(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'insertborderwidth',
                               0, 1.3, 2.6, 6, -2, '10p')
 
-    def test_configure_insertofftime(self):
+    def test_insertofftime(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'insertofftime', 100)
 
-    def test_configure_insertontime(self):
+    def test_insertontime(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'insertontime', 100)
 
-    def test_configure_insertwidth(self):
+    def test_insertwidth(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'insertwidth', 1.3, 2.6, -2, '10p')
 
-    def test_configure_jump(self):
+    def test_jump(self):
         widget = self.create()
         self.checkBooleanParam(widget, 'jump')
 
-    def test_configure_justify(self):
+    def test_justify(self):
         widget = self.create()
         self.checkEnumParam(widget, 'justify', 'left', 'right', 'center',
                 errmsg='bad justification "{}": must be '
@@ -369,155 +377,154 @@ class StandardOptionsTests:
                 errmsg='ambiguous justification "": must be '
                        'left, right, or center')
 
-    def test_configure_orient(self):
+    def test_orient(self):
         widget = self.create()
         self.assertEqual(str(widget['orient']), self.default_orient)
         self.checkEnumParam(widget, 'orient', 'horizontal', 'vertical')
 
-    def test_configure_padx(self):
+    def test_padx(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'padx', 3, 4.4, 5.6, -2, '12m',
                               conv=self._conv_pad_pixels)
 
-    def test_configure_pady(self):
+    def test_pady(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'pady', 3, 4.4, 5.6, -2, '12m',
                               conv=self._conv_pad_pixels)
 
-    def test_configure_relief(self):
+    def test_relief(self):
         widget = self.create()
         self.checkReliefParam(widget, 'relief')
 
-    def test_configure_repeatdelay(self):
+    def test_repeatdelay(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'repeatdelay', -500, 500)
 
-    def test_configure_repeatinterval(self):
+    def test_repeatinterval(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'repeatinterval', -500, 500)
 
-    def test_configure_selectbackground(self):
+    def test_selectbackground(self):
         widget = self.create()
         self.checkColorParam(widget, 'selectbackground')
 
-    def test_configure_selectborderwidth(self):
+    def test_selectborderwidth(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'selectborderwidth', 1.3, 2.6, -2, '10p')
 
-    def test_configure_selectforeground(self):
+    def test_selectforeground(self):
         widget = self.create()
         self.checkColorParam(widget, 'selectforeground')
 
-    def test_configure_setgrid(self):
+    def test_setgrid(self):
         widget = self.create()
         self.checkBooleanParam(widget, 'setgrid')
 
-    def test_configure_state(self):
+    def test_state(self):
         widget = self.create()
         self.checkEnumParam(widget, 'state', 'active', 'disabled', 'normal')
 
-    def test_configure_takefocus(self):
+    def test_takefocus(self):
         widget = self.create()
         self.checkParams(widget, 'takefocus', '0', '1', '')
 
-    def test_configure_text(self):
+    def test_text(self):
         widget = self.create()
         self.checkParams(widget, 'text', '', 'any string')
 
-    def test_configure_textvariable(self):
+    def test_textvariable(self):
         widget = self.create()
         var = tkinter.StringVar(self.root)
         self.checkVariableParam(widget, 'textvariable', var)
 
-    def test_configure_troughcolor(self):
+    def test_troughcolor(self):
         widget = self.create()
         self.checkColorParam(widget, 'troughcolor')
 
-    def test_configure_underline(self):
+    def test_underline(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'underline', 0, 1, 10)
 
-    def test_configure_wraplength(self):
+    def test_wraplength(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'wraplength', 100)
 
-    def test_configure_xscrollcommand(self):
+    def test_xscrollcommand(self):
         widget = self.create()
         self.checkCommandParam(widget, 'xscrollcommand')
 
-    def test_configure_yscrollcommand(self):
+    def test_yscrollcommand(self):
         widget = self.create()
         self.checkCommandParam(widget, 'yscrollcommand')
 
     # non-standard but common options
 
-    def test_configure_command(self):
+    def test_command(self):
         widget = self.create()
         self.checkCommandParam(widget, 'command')
 
-    def test_configure_indicatoron(self):
+    def test_indicatoron(self):
         widget = self.create()
         self.checkBooleanParam(widget, 'indicatoron')
 
-    def test_configure_offrelief(self):
+    def test_offrelief(self):
         widget = self.create()
         self.checkReliefParam(widget, 'offrelief')
 
-    def test_configure_overrelief(self):
+    def test_overrelief(self):
         widget = self.create()
         self.checkReliefParam(widget, 'overrelief')
 
-    def test_configure_selectcolor(self):
+    def test_selectcolor(self):
         widget = self.create()
         self.checkColorParam(widget, 'selectcolor')
 
-    def test_configure_selectimage(self):
+    def test_selectimage(self):
         widget = self.create()
         self.checkImageParam(widget, 'selectimage')
 
     @requires_tcl(8, 5)
-    def test_configure_tristateimage(self):
+    def test_tristateimage(self):
         widget = self.create()
         self.checkImageParam(widget, 'tristateimage')
 
     @requires_tcl(8, 5)
-    def test_configure_tristatevalue(self):
+    def test_tristatevalue(self):
         widget = self.create()
         self.checkParam(widget, 'tristatevalue', 'unknowable')
 
-    def test_configure_variable(self):
+    def test_variable(self):
         widget = self.create()
         var = tkinter.DoubleVar(self.root)
         self.checkVariableParam(widget, 'variable', var)
 
 
 class IntegerSizeTests:
-    def test_configure_height(self):
+    def test_height(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'height', 100, -100, 0)
 
-    def test_configure_width(self):
+    def test_width(self):
         widget = self.create()
         self.checkIntegerParam(widget, 'width', 402, -402, 0)
 
 
 class PixelSizeTests:
-    def test_configure_height(self):
+    def test_height(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'height', 100, 101.2, 102.6, -100, 0, '3c')
 
-    def test_configure_width(self):
+    def test_width(self):
         widget = self.create()
         self.checkPixelsParam(widget, 'width', 402, 403.4, 404.6, -402, 0, '5i')
 
 
 def add_standard_options(*source_classes):
-    # This decorator adds test_configure_xxx methods from source classes for
-    # every xxx option in the OPTIONS class attribute if they are not defined
-    # explicitly.
+    # This decorator adds test_xxx methods from source classes for every xxx
+    # option in the OPTIONS class attribute if they are not defined explicitly.
     def decorator(cls):
         for option in cls.OPTIONS:
-            methodname = 'test_configure_' + option
+            methodname = 'test_' + option
             if not hasattr(cls, methodname):
                 for source_class in source_classes:
                     if hasattr(source_class, methodname):

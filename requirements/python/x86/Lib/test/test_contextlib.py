@@ -1,5 +1,6 @@
 """Unit tests for contextlib.py, and other context managers."""
 
+import asyncio
 import io
 import sys
 import tempfile
@@ -7,7 +8,6 @@ import threading
 import unittest
 from contextlib import *  # Tests __all__
 from test import support
-from test.support import os_helper
 import weakref
 
 
@@ -126,22 +126,19 @@ class ContextManagerTestCase(unittest.TestCase):
         self.assertEqual(state, [1, 42, 999])
 
     def test_contextmanager_except_stopiter(self):
+        stop_exc = StopIteration('spam')
         @contextmanager
         def woohoo():
             yield
-
-        class StopIterationSubclass(StopIteration):
-            pass
-
-        for stop_exc in (StopIteration('spam'), StopIterationSubclass('spam')):
-            with self.subTest(type=type(stop_exc)):
-                try:
-                    with woohoo():
-                        raise stop_exc
-                except Exception as ex:
-                    self.assertIs(ex, stop_exc)
-                else:
-                    self.fail(f'{stop_exc} was suppressed')
+        try:
+            with self.assertWarnsRegex(DeprecationWarning,
+                                       "StopIteration"):
+                with woohoo():
+                    raise stop_exc
+        except Exception as ex:
+            self.assertIs(ex, stop_exc)
+        else:
+            self.fail('StopIteration was suppressed')
 
     def test_contextmanager_except_pep479(self):
         code = """\
@@ -231,8 +228,6 @@ def woohoo():
         def woohoo(a, b):
             a = weakref.ref(a)
             b = weakref.ref(b)
-            # Allow test to work with a non-refcounted GC
-            support.gc_collect()
             self.assertIsNone(a())
             self.assertIsNone(b())
             yield
@@ -321,19 +316,19 @@ class FileContextTestCase(unittest.TestCase):
         tfn = tempfile.mktemp()
         try:
             f = None
-            with open(tfn, "w", encoding="utf-8") as f:
+            with open(tfn, "w") as f:
                 self.assertFalse(f.closed)
                 f.write("Booh\n")
             self.assertTrue(f.closed)
             f = None
             with self.assertRaises(ZeroDivisionError):
-                with open(tfn, "r", encoding="utf-8") as f:
+                with open(tfn, "r") as f:
                     self.assertFalse(f.closed)
                     self.assertEqual(f.read(), "Booh\n")
                     1 / 0
             self.assertTrue(f.closed)
         finally:
-            os_helper.unlink(tfn)
+            support.unlink(tfn)
 
 class LockContextTestCase(unittest.TestCase):
 
@@ -609,9 +604,8 @@ class TestBaseExitStack:
                 stack.callback(arg=1)
             with self.assertRaises(TypeError):
                 self.exit_stack.callback(arg=2)
-            with self.assertRaises(TypeError):
-                stack.callback(callback=_exit, arg=3)
-        self.assertEqual(result, [])
+            stack.callback(callback=_exit, arg=3)
+        self.assertEqual(result, [((), {'arg': 3})])
 
     def test_push(self):
         exc_raised = ZeroDivisionError

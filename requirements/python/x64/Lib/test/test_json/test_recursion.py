@@ -52,7 +52,7 @@ class TestRecursion:
                         return [JSONTestObject]
                     else:
                         return 'JSONTestObject'
-                return self.json.JSONEncoder.default(o)
+                return pyjson.JSONEncoder.default(o)
 
         enc = RecursiveJSONEncoder()
         self.assertEqual(enc.encode(JSONTestObject), '"JSONTestObject"')

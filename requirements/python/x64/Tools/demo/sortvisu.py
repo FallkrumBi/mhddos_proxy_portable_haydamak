@@ -444,7 +444,7 @@ def quicksort(array):
             array.wait(1000)
             left = first
             right = last
-            while True:
+            while 1:
                 array.message("Sweep right pointer")
                 right = right-1
                 array.show_right(right)
@@ -473,7 +473,7 @@ def quicksort(array):
         array.hide_partition()
 
 def demosort(array):
-    while True:
+    while 1:
         for alg in [quicksort, insertionsort, selectionsort, bubblesort]:
             randomize(array)
             alg(array)

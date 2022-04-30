@@ -7,7 +7,6 @@ import collections
 import logging
 import threading
 import time
-import types
 
 FIRST_COMPLETED = 'FIRST_COMPLETED'
 FIRST_EXCEPTION = 'FIRST_EXCEPTION'
@@ -52,10 +51,6 @@ class CancelledError(Error):
 
 class TimeoutError(Error):
     """The operation exceeded the given deadline."""
-    pass
-
-class InvalidStateError(Error):
-    """The operation is not allowed in this state."""
     pass
 
 class _Waiter(object):
@@ -386,11 +381,7 @@ class Future(object):
 
     def __get_result(self):
         if self._exception:
-            try:
-                raise self._exception
-            finally:
-                # Break a reference cycle with the exception in self._exception
-                self = None
+            raise self._exception
         else:
             return self._result
 
@@ -430,24 +421,20 @@ class Future(object):
                 timeout.
             Exception: If the call raised then that exception will be raised.
         """
-        try:
-            with self._condition:
-                if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
-                    raise CancelledError()
-                elif self._state == FINISHED:
-                    return self.__get_result()
+        with self._condition:
+            if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
+                raise CancelledError()
+            elif self._state == FINISHED:
+                return self.__get_result()
 
-                self._condition.wait(timeout)
+            self._condition.wait(timeout)
 
-                if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
-                    raise CancelledError()
-                elif self._state == FINISHED:
-                    return self.__get_result()
-                else:
-                    raise TimeoutError()
-        finally:
-            # Break a reference cycle with the exception in self._exception
-            self = None
+            if self._state in [CANCELLED, CANCELLED_AND_NOTIFIED]:
+                raise CancelledError()
+            elif self._state == FINISHED:
+                return self.__get_result()
+            else:
+                raise TimeoutError()
 
     def exception(self, timeout=None):
         """Return the exception raised by the call that the future represents.
@@ -529,8 +516,6 @@ class Future(object):
         Should only be used by Executor implementations and unit tests.
         """
         with self._condition:
-            if self._state in {CANCELLED, CANCELLED_AND_NOTIFIED, FINISHED}:
-                raise InvalidStateError('{}: {!r}'.format(self._state, self))
             self._result = result
             self._state = FINISHED
             for waiter in self._waiters:
@@ -544,8 +529,6 @@ class Future(object):
         Should only be used by Executor implementations and unit tests.
         """
         with self._condition:
-            if self._state in {CANCELLED, CANCELLED_AND_NOTIFIED, FINISHED}:
-                raise InvalidStateError('{}: {!r}'.format(self._state, self))
             self._exception = exception
             self._state = FINISHED
             for waiter in self._waiters:
@@ -553,12 +536,10 @@ class Future(object):
             self._condition.notify_all()
         self._invoke_callbacks()
 
-    __class_getitem__ = classmethod(types.GenericAlias)
-
 class Executor(object):
     """This is an abstract base class for concrete asynchronous executors."""
 
-    def submit(self, fn, /, *args, **kwargs):
+    def submit(*args, **kwargs):
         """Submits a callable to be executed with the given arguments.
 
         Schedules the callable to be executed as fn(*args, **kwargs) and returns
@@ -567,6 +548,15 @@ class Executor(object):
         Returns:
             A Future representing the given call.
         """
+        if len(args) >= 2:
+            pass
+        elif not args:
+            raise TypeError("descriptor 'submit' of 'Executor' object "
+                            "needs an argument")
+        elif 'fn' not in kwargs:
+            raise TypeError('submit expected at least 1 positional argument, '
+                            'got %d' % (len(args)-1))
+
         raise NotImplementedError()
 
     def map(self, fn, *iterables, timeout=None, chunksize=1):
@@ -613,7 +603,7 @@ class Executor(object):
                     future.cancel()
         return result_iterator()
 
-    def shutdown(self, wait=True, *, cancel_futures=False):
+    def shutdown(self, wait=True):
         """Clean-up the resources associated with the Executor.
 
         It is safe to call this method several times. Otherwise, no other
@@ -623,9 +613,6 @@ class Executor(object):
             wait: If True then shutdown will not return until all running
                 futures have finished executing and the resources used by the
                 executor have been reclaimed.
-            cancel_futures: If True then shutdown will cancel all pending
-                futures. Futures that are completed or running will not be
-                cancelled.
         """
         pass
 

@@ -3,11 +3,6 @@ import decimal
 import unittest
 
 
-def tearDownModule():
-    asyncio.set_event_loop_policy(None)
-
-
-@unittest.skipUnless(decimal.HAVE_CONTEXTVAR, "decimal is built with a thread-local context")
 class DecimalContextTest(unittest.TestCase):
 
     def test_asyncio_task_decimal_context(self):

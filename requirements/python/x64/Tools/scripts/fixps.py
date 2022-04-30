@@ -14,18 +14,20 @@ def main():
         except IOError as msg:
             print(filename, ': can\'t open :', msg)
             continue
-        with f:
-            line = f.readline()
-            if not re.match('^#! */usr/local/bin/python', line):
-                print(filename, ': not a /usr/local/bin/python script')
-                continue
-            rest = f.read()
+        line = f.readline()
+        if not re.match('^#! */usr/local/bin/python', line):
+            print(filename, ': not a /usr/local/bin/python script')
+            f.close()
+            continue
+        rest = f.read()
+        f.close()
         line = re.sub('/usr/local/bin/python',
                       '/usr/bin/env python', line)
         print(filename, ':', repr(line))
-        with open(filename, "w") as f:
-            f.write(line)
-            f.write(rest)
+        f = open(filename, "w")
+        f.write(line)
+        f.write(rest)
+        f.close()
 
 if __name__ == '__main__':
     main()

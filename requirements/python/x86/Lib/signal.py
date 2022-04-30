@@ -5,19 +5,19 @@ from enum import IntEnum as _IntEnum
 
 _globals = globals()
 
-_IntEnum._convert_(
+_IntEnum._convert(
         'Signals', __name__,
         lambda name:
             name.isupper()
             and (name.startswith('SIG') and not name.startswith('SIG_'))
             or name.startswith('CTRL_'))
 
-_IntEnum._convert_(
+_IntEnum._convert(
         'Handlers', __name__,
         lambda name: name in ('SIG_DFL', 'SIG_IGN'))
 
 if 'pthread_sigmask' in _globals:
-    _IntEnum._convert_(
+    _IntEnum._convert(
             'Sigmasks', __name__,
             lambda name: name in ('SIG_BLOCK', 'SIG_UNBLOCK', 'SIG_SETMASK'))
 
@@ -65,7 +65,8 @@ if 'pthread_sigmask' in _globals:
 if 'sigpending' in _globals:
     @_wraps(_signal.sigpending)
     def sigpending():
-        return {_int_to_enum(x, Signals) for x in _signal.sigpending()}
+        sigs = _signal.sigpending()
+        return set(_int_to_enum(x, Signals) for x in sigs)
 
 
 if 'sigwait' in _globals:
@@ -74,12 +75,5 @@ if 'sigwait' in _globals:
         retsig = _signal.sigwait(sigset)
         return _int_to_enum(retsig, Signals)
     sigwait.__doc__ = _signal.sigwait
-
-
-if 'valid_signals' in _globals:
-    @_wraps(_signal.valid_signals)
-    def valid_signals():
-        return {_int_to_enum(x, Signals) for x in _signal.valid_signals()}
-
 
 del _globals, _wraps

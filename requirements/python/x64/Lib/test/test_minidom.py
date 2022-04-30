@@ -2,7 +2,6 @@
 
 import copy
 import pickle
-import io
 from test import support
 import unittest
 
@@ -326,7 +325,7 @@ class MinidomTest(unittest.TestCase):
         node = child.getAttributeNode("spam")
         self.assertRaises(xml.dom.NotFoundErr, child.removeAttributeNode,
             None)
-        self.assertIs(node, child.removeAttributeNode(node))
+        child.removeAttributeNode(node)
         self.confirm(len(child.attributes) == 0
                 and child.getAttributeNode("spam") is None)
         dom2 = Document()
@@ -1152,22 +1151,6 @@ class MinidomTest(unittest.TestCase):
 
         doc.unlink()
 
-    def testStandalone(self):
-        doc = parseString('<foo>&#x20ac;</foo>')
-        self.assertEqual(doc.toxml(),
-                         '<?xml version="1.0" ?><foo>\u20ac</foo>')
-        self.assertEqual(doc.toxml(standalone=None),
-                         '<?xml version="1.0" ?><foo>\u20ac</foo>')
-        self.assertEqual(doc.toxml(standalone=True),
-            '<?xml version="1.0" standalone="yes"?><foo>\u20ac</foo>')
-        self.assertEqual(doc.toxml(standalone=False),
-            '<?xml version="1.0" standalone="no"?><foo>\u20ac</foo>')
-        self.assertEqual(doc.toxml('utf-8', True),
-            b'<?xml version="1.0" encoding="utf-8" standalone="yes"?>'
-            b'<foo>\xe2\x82\xac</foo>')
-
-        doc.unlink()
-
     class UserDataHandler:
         called = 0
         def handle(self, operation, key, data, src, dst):
@@ -1627,41 +1610,6 @@ class MinidomTest(unittest.TestCase):
         doc = parse(tstfile)
         pi = doc.createProcessingInstruction("y", "z")
         pi.nodeValue = "crash"
-
-    def test_minidom_attribute_order(self):
-        xml_str = '<?xml version="1.0" ?><curriculum status="public" company="example"/>'
-        doc = parseString(xml_str)
-        output = io.StringIO()
-        doc.writexml(output)
-        self.assertEqual(output.getvalue(), xml_str)
-
-    def test_toxml_with_attributes_ordered(self):
-        xml_str = '<?xml version="1.0" ?><curriculum status="public" company="example"/>'
-        doc = parseString(xml_str)
-        self.assertEqual(doc.toxml(), xml_str)
-
-    def test_toprettyxml_with_attributes_ordered(self):
-        xml_str = '<?xml version="1.0" ?><curriculum status="public" company="example"/>'
-        doc = parseString(xml_str)
-        self.assertEqual(doc.toprettyxml(),
-                         '<?xml version="1.0" ?>\n'
-                         '<curriculum status="public" company="example"/>\n')
-
-    def test_toprettyxml_with_cdata(self):
-        xml_str = '<?xml version="1.0" ?><root><node><![CDATA[</data>]]></node></root>'
-        doc = parseString(xml_str)
-        self.assertEqual(doc.toprettyxml(),
-                         '<?xml version="1.0" ?>\n'
-                         '<root>\n'
-                         '\t<node><![CDATA[</data>]]></node>\n'
-                         '</root>\n')
-
-    def test_cdata_parsing(self):
-        xml_str = '<?xml version="1.0" ?><root><node><![CDATA[</data>]]></node></root>'
-        dom1 = parseString(xml_str)
-        self.checkWholeText(dom1.getElementsByTagName('node')[0].firstChild, '</data>')
-        dom2 = parseString(dom1.toprettyxml())
-        self.checkWholeText(dom2.getElementsByTagName('node')[0].firstChild, '</data>')
 
 if __name__ == "__main__":
     unittest.main()

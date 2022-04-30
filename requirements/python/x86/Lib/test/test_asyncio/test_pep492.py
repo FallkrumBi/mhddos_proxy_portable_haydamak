@@ -4,14 +4,11 @@ import sys
 import types
 import unittest
 
+from test import support
 from unittest import mock
 
 import asyncio
 from test.test_asyncio import utils as test_utils
-
-
-def tearDownModule():
-    asyncio.set_event_loop_policy(None)
 
 
 # Test that asyncio.iscoroutine() uses collections.abc.Coroutine
@@ -44,19 +41,19 @@ class LockTests(BaseTest):
 
     def test_context_manager_async_with(self):
         primitives = [
-            asyncio.Lock(),
-            asyncio.Condition(),
-            asyncio.Semaphore(),
-            asyncio.BoundedSemaphore(),
+            asyncio.Lock(loop=self.loop),
+            asyncio.Condition(loop=self.loop),
+            asyncio.Semaphore(loop=self.loop),
+            asyncio.BoundedSemaphore(loop=self.loop),
         ]
 
         async def test(lock):
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01, loop=self.loop)
             self.assertFalse(lock.locked())
             async with lock as _lock:
                 self.assertIs(_lock, None)
                 self.assertTrue(lock.locked())
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0.01, loop=self.loop)
                 self.assertTrue(lock.locked())
             self.assertFalse(lock.locked())
 
@@ -66,21 +63,22 @@ class LockTests(BaseTest):
 
     def test_context_manager_with_await(self):
         primitives = [
-            asyncio.Lock(),
-            asyncio.Condition(),
-            asyncio.Semaphore(),
-            asyncio.BoundedSemaphore(),
+            asyncio.Lock(loop=self.loop),
+            asyncio.Condition(loop=self.loop),
+            asyncio.Semaphore(loop=self.loop),
+            asyncio.BoundedSemaphore(loop=self.loop),
         ]
 
         async def test(lock):
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0.01, loop=self.loop)
             self.assertFalse(lock.locked())
-            with self.assertRaisesRegex(
-                TypeError,
-                "can't be used in 'await' expression"
-            ):
-                with await lock:
-                    pass
+            with self.assertWarns(DeprecationWarning):
+                with await lock as _lock:
+                    self.assertIs(_lock, None)
+                    self.assertTrue(lock.locked())
+                    await asyncio.sleep(0.01, loop=self.loop)
+                    self.assertTrue(lock.locked())
+                self.assertFalse(lock.locked())
 
         for primitive in primitives:
             self.loop.run_until_complete(test(primitive))
@@ -128,10 +126,9 @@ class CoroutineTests(BaseTest):
             def __await__(self):
                 return ('spam',)
 
-        with self.assertWarns(DeprecationWarning):
-            @asyncio.coroutine
-            def func():
-                return Awaitable()
+        @asyncio.coroutine
+        def func():
+            return Awaitable()
 
         coro = func()
         self.assertEqual(coro.send(None), 'spam')
@@ -197,13 +194,13 @@ class CoroutineTests(BaseTest):
 
     def test_double_await(self):
         async def afunc():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.1, loop=self.loop)
 
         async def runner():
             coro = afunc()
-            t = self.loop.create_task(coro)
+            t = asyncio.Task(coro, loop=self.loop)
             try:
-                await asyncio.sleep(0)
+                await asyncio.sleep(0, loop=self.loop)
                 await coro
             finally:
                 t.cancel()

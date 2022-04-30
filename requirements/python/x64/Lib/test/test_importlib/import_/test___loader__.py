@@ -2,7 +2,6 @@ from importlib import machinery
 import sys
 import types
 import unittest
-import warnings
 
 from .. import util
 
@@ -46,29 +45,25 @@ class LoaderMock:
 class LoaderAttributeTests:
 
     def test___loader___missing(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ImportWarning)
-            module = types.ModuleType('blah')
-            try:
-                del module.__loader__
-            except AttributeError:
-                pass
-            loader = LoaderMock()
-            loader.module = module
-            with util.uncache('blah'), util.import_state(meta_path=[loader]):
-                module = self.__import__('blah')
-            self.assertEqual(loader, module.__loader__)
+        module = types.ModuleType('blah')
+        try:
+            del module.__loader__
+        except AttributeError:
+            pass
+        loader = LoaderMock()
+        loader.module = module
+        with util.uncache('blah'), util.import_state(meta_path=[loader]):
+            module = self.__import__('blah')
+        self.assertEqual(loader, module.__loader__)
 
     def test___loader___is_None(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ImportWarning)
-            module = types.ModuleType('blah')
-            module.__loader__ = None
-            loader = LoaderMock()
-            loader.module = module
-            with util.uncache('blah'), util.import_state(meta_path=[loader]):
-                returned_module = self.__import__('blah')
-            self.assertEqual(loader, module.__loader__)
+        module = types.ModuleType('blah')
+        module.__loader__ = None
+        loader = LoaderMock()
+        loader.module = module
+        with util.uncache('blah'), util.import_state(meta_path=[loader]):
+            returned_module = self.__import__('blah')
+        self.assertEqual(loader, module.__loader__)
 
 
 (Frozen_Tests,

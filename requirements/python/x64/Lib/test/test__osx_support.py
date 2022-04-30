@@ -8,7 +8,7 @@ import stat
 import sys
 import unittest
 
-from test.support import os_helper
+import test.support
 
 import _osx_support
 
@@ -19,7 +19,7 @@ class Test_OSXSupport(unittest.TestCase):
         self.maxDiff = None
         self.prog_name = 'bogus_program_xxxx'
         self.temp_path_dir = os.path.abspath(os.getcwd())
-        self.env = os_helper.EnvironmentVarGuard()
+        self.env = test.support.EnvironmentVarGuard()
         self.addCleanup(self.env.__exit__)
         for cv in ('CFLAGS', 'LDFLAGS', 'CPPFLAGS',
                             'BASECFLAGS', 'BLDSHARED', 'LDSHARED', 'CC',
@@ -39,9 +39,9 @@ class Test_OSXSupport(unittest.TestCase):
         if self.env['PATH']:
             self.env['PATH'] = self.env['PATH'] + ':'
         self.env['PATH'] = self.env['PATH'] + os.path.abspath(self.temp_path_dir)
-        os_helper.unlink(self.prog_name)
+        test.support.unlink(self.prog_name)
         self.assertIsNone(_osx_support._find_executable(self.prog_name))
-        self.addCleanup(os_helper.unlink, self.prog_name)
+        self.addCleanup(test.support.unlink, self.prog_name)
         with open(self.prog_name, 'w') as f:
             f.write("#!/bin/sh\n/bin/echo OK\n")
         os.chmod(self.prog_name, stat.S_IRWXU)
@@ -52,8 +52,8 @@ class Test_OSXSupport(unittest.TestCase):
         if self.env['PATH']:
             self.env['PATH'] = self.env['PATH'] + ':'
         self.env['PATH'] = self.env['PATH'] + os.path.abspath(self.temp_path_dir)
-        os_helper.unlink(self.prog_name)
-        self.addCleanup(os_helper.unlink, self.prog_name)
+        test.support.unlink(self.prog_name)
+        self.addCleanup(test.support.unlink, self.prog_name)
         with open(self.prog_name, 'w') as f:
             f.write("#!/bin/sh\n/bin/echo ExpectedOutput\n")
         os.chmod(self.prog_name, stat.S_IRWXU)
@@ -143,8 +143,8 @@ class Test_OSXSupport(unittest.TestCase):
         suffix = (':' + self.env['PATH']) if self.env['PATH'] else ''
         self.env['PATH'] = os.path.abspath(self.temp_path_dir) + suffix
         for c_name, c_output in compilers:
-            os_helper.unlink(c_name)
-            self.addCleanup(os_helper.unlink, c_name)
+            test.support.unlink(c_name)
+            self.addCleanup(test.support.unlink, c_name)
             with open(c_name, 'w') as f:
                 f.write("#!/bin/sh\n/bin/echo " + c_output)
             os.chmod(c_name, stat.S_IRWXU)
@@ -160,29 +160,6 @@ class Test_OSXSupport(unittest.TestCase):
         'BLDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 -g',
         'LDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 '
                         '-isysroot /Developer/SDKs/MacOSX10.4u.sdk -g',
-        }
-        expected_vars = {
-        'CFLAGS': '-fno-strict-aliasing  -g -O3    ',
-        'LDFLAGS': '    -g',
-        'CPPFLAGS': '-I.  ',
-        'BLDSHARED': 'gcc-4.0 -bundle    -g',
-        'LDSHARED': 'gcc-4.0 -bundle      -g',
-        }
-        self.add_expected_saved_initial_values(config_vars, expected_vars)
-
-        self.assertEqual(expected_vars,
-                            _osx_support._remove_universal_flags(
-                                    config_vars))
-
-    def test__remove_universal_flags_alternate(self):
-        # bpo-38360: also test the alternate single-argument form of -isysroot
-        config_vars = {
-        'CFLAGS': '-fno-strict-aliasing  -g -O3 -arch ppc -arch i386  ',
-        'LDFLAGS': '-arch ppc -arch i386   -g',
-        'CPPFLAGS': '-I. -isysroot/Developer/SDKs/MacOSX10.4u.sdk',
-        'BLDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 -g',
-        'LDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 '
-                        '-isysroot/Developer/SDKs/MacOSX10.4u.sdk -g',
         }
         expected_vars = {
         'CFLAGS': '-fno-strict-aliasing  -g -O3    ',
@@ -221,8 +198,8 @@ class Test_OSXSupport(unittest.TestCase):
         suffix = (':' + self.env['PATH']) if self.env['PATH'] else ''
         self.env['PATH'] = os.path.abspath(self.temp_path_dir) + suffix
         c_name = 'clang'
-        os_helper.unlink(c_name)
-        self.addCleanup(os_helper.unlink, c_name)
+        test.support.unlink(c_name)
+        self.addCleanup(test.support.unlink, c_name)
         # exit status 255 means no PPC support in this compiler chain
         with open(c_name, 'w') as f:
             f.write("#!/bin/sh\nexit 255")
@@ -267,34 +244,6 @@ class Test_OSXSupport(unittest.TestCase):
         'BLDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 -g',
         'LDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 '
                         '-isysroot /Developer/SDKs/MacOSX10.1.sdk -g',
-        }
-        expected_vars = {
-        'CC': 'clang',
-        'CFLAGS': '-fno-strict-aliasing  -g -O3 -arch ppc -arch i386  '
-                        ' ',
-        'LDFLAGS': '-arch ppc -arch i386   -g',
-        'CPPFLAGS': '-I.  ',
-        'BLDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 -g',
-        'LDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 '
-                        ' -g',
-        }
-        self.add_expected_saved_initial_values(config_vars, expected_vars)
-
-        self.assertEqual(expected_vars,
-                            _osx_support._check_for_unavailable_sdk(
-                                    config_vars))
-
-    def test__check_for_unavailable_sdk_alternate(self):
-        # bpo-38360: also test the alternate single-argument form of -isysroot
-        config_vars = {
-        'CC': 'clang',
-        'CFLAGS': '-fno-strict-aliasing  -g -O3 -arch ppc -arch i386  '
-                        '-isysroot/Developer/SDKs/MacOSX10.1.sdk',
-        'LDFLAGS': '-arch ppc -arch i386   -g',
-        'CPPFLAGS': '-I. -isysroot/Developer/SDKs/MacOSX10.1.sdk',
-        'BLDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 -g',
-        'LDSHARED': 'gcc-4.0 -bundle  -arch ppc -arch i386 '
-                        '-isysroot/Developer/SDKs/MacOSX10.1.sdk -g',
         }
         expected_vars = {
         'CC': 'clang',

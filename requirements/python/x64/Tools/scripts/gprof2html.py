@@ -28,7 +28,14 @@ def add_escapes(filename):
         for line in fp:
             yield html.escape(line)
 
-def gprof2html(input, output, filename):
+
+def main():
+    filename = "gprof.out"
+    if sys.argv[1:]:
+        filename = sys.argv[1]
+    outputfilename = filename + ".html"
+    input = add_escapes(filename)
+    output = open(outputfilename, "w")
     output.write(header % filename)
     for line in input:
         output.write(line)
@@ -71,16 +78,7 @@ def gprof2html(input, output, filename):
                 part = '<a href="#call:%s">%s</a>' % (part, part)
             output.write(part)
     output.write(trailer)
-
-
-def main():
-    filename = "gprof.out"
-    if sys.argv[1:]:
-        filename = sys.argv[1]
-    outputfilename = filename + ".html"
-    input = add_escapes(filename)
-    with open(outputfilename, "w") as output:
-        gprof2html(input, output, filename)
+    output.close()
     webbrowser.open("file:" + os.path.abspath(outputfilename))
 
 if __name__ == '__main__':

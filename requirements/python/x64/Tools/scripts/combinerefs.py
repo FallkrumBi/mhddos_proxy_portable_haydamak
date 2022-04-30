@@ -33,7 +33,7 @@ or
 
 if the refcount changed.
 
-typename is Py_TYPE(object)->tp_name, extracted from the second PYTHONDUMPREFS
+typename is object->ob_type->tp_name, extracted from the second PYTHONDUMPREFS
 output block.
 
 repr is repr(object), extracted from the first PYTHONDUMPREFS output block.
@@ -85,7 +85,9 @@ def read(fileiter, pat, whilematch):
         else:
             break
 
-def combinefile(f):
+def combine(fname):
+    f = open(fname)
+
     fi = iter(f)
 
     for line in read(fi, re.compile(r'^Remaining objects:$'), False):
@@ -119,11 +121,8 @@ def combinefile(f):
             print('[%s->%s]' % (addr2rc[addr], rc), end=' ')
         print(guts, addr2guts[addr])
 
+    f.close()
     print("%d objects before, %d after" % (before, after))
-
-def combine(fname):
-    with open(fname) as f:
-        combinefile(f)
 
 if __name__ == '__main__':
     combine(sys.argv[1])

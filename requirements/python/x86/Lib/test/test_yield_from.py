@@ -11,7 +11,6 @@ import unittest
 import inspect
 
 from test.support import captured_stderr, disable_gc, gc_collect
-from test import support
 
 class TestPEP380Operation(unittest.TestCase):
     """
@@ -563,12 +562,11 @@ class TestPEP380Operation(unittest.TestCase):
             self.assertEqual(next(gi), 1)
             gi.throw(AttributeError)
 
-        with support.catch_unraisable_exception() as cm:
+        with captured_stderr() as output:
             gi = g()
             self.assertEqual(next(gi), 1)
             gi.close()
-
-            self.assertEqual(ZeroDivisionError, cm.unraisable.exc_type)
+        self.assertIn('ZeroDivisionError', output.getvalue())
 
     def test_exception_in_initial_next_call(self):
         """
@@ -938,9 +936,6 @@ class TestPEP380Operation(unittest.TestCase):
                 res.append(g1.throw(MyErr))
         except StopIteration:
             pass
-        except:
-            self.assertEqual(res, [0, 1, 2, 3])
-            raise
         # Check with close
         class MyIt(object):
             def __iter__(self):

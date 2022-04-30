@@ -10,8 +10,7 @@ import importlib
 import importlib.util
 import unittest
 
-from test.support import verbose
-from test.support.os_helper import create_empty_file
+from test.support import create_empty_file, verbose
 from reprlib import repr as r # Don't shadow builtin repr
 from reprlib import Repr
 from reprlib import recursive_repr
@@ -203,9 +202,9 @@ class ReprTests(unittest.TestCase):
         class C:
             def foo(cls): pass
         x = staticmethod(C.foo)
-        self.assertEqual(repr(x), f'<staticmethod({C.foo!r})>')
+        self.assertTrue(repr(x).startswith('<staticmethod object at 0x'))
         x = classmethod(C.foo)
-        self.assertEqual(repr(x), f'<classmethod({C.foo!r})>')
+        self.assertTrue(repr(x).startswith('<classmethod object at 0x'))
 
     def test_unsortable(self):
         # Repr.repr() used to call sorted() on sets, frozensets and dicts

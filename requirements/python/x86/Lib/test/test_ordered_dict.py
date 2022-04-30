@@ -10,13 +10,10 @@ import unittest
 import weakref
 from collections.abc import MutableMapping
 from test import mapping_tests, support
-from test.support import import_helper
 
 
-py_coll = import_helper.import_fresh_module('collections',
-                                            blocked=['_collections'])
-c_coll = import_helper.import_fresh_module('collections',
-                                           fresh=['_collections'])
+py_coll = support.import_fresh_module('collections', blocked=['_collections'])
+c_coll = support.import_fresh_module('collections', fresh=['_collections'])
 
 
 @contextlib.contextmanager
@@ -410,9 +407,9 @@ class OrderedDictTests:
         self.assertEqual(list(od), list('abcde'))
         od.move_to_end('c')
         self.assertEqual(list(od), list('abdec'))
-        od.move_to_end('c', False)
+        od.move_to_end('c', 0)
         self.assertEqual(list(od), list('cabde'))
-        od.move_to_end('c', False)
+        od.move_to_end('c', 0)
         self.assertEqual(list(od), list('cabde'))
         od.move_to_end('e')
         self.assertEqual(list(od), list('cabde'))
@@ -421,7 +418,7 @@ class OrderedDictTests:
         with self.assertRaises(KeyError):
             od.move_to_end('x')
         with self.assertRaises(KeyError):
-            od.move_to_end('x', False)
+            od.move_to_end('x', 0)
 
     def test_move_to_end_issue25406(self):
         OrderedDict = self.OrderedDict
@@ -462,9 +459,7 @@ class OrderedDictTests:
         self.assertEqual(list(MyOD(items).items()), items)
 
     def test_highly_nested(self):
-        # Issues 25395 and 35983: test that the trashcan mechanism works
-        # correctly for OrderedDict: deleting a highly nested OrderDict
-        # should not crash Python.
+        # Issue 25395: crashes during garbage collection
         OrderedDict = self.OrderedDict
         obj = None
         for _ in range(1000):
@@ -473,9 +468,7 @@ class OrderedDictTests:
         support.gc_collect()
 
     def test_highly_nested_subclass(self):
-        # Issues 25395 and 35983: test that the trashcan mechanism works
-        # correctly for OrderedDict: deleting a highly nested OrderDict
-        # should not crash Python.
+        # Issue 25395: crashes during garbage collection
         OrderedDict = self.OrderedDict
         deleted = []
         class MyOD(OrderedDict):
@@ -657,60 +650,6 @@ class OrderedDictTests:
         support.check_free_after_iterating(self, lambda d: iter(d.values()), self.OrderedDict)
         support.check_free_after_iterating(self, lambda d: iter(d.items()), self.OrderedDict)
 
-    def test_merge_operator(self):
-        OrderedDict = self.OrderedDict
-
-        a = OrderedDict({0: 0, 1: 1, 2: 1})
-        b = OrderedDict({1: 1, 2: 2, 3: 3})
-
-        c = a.copy()
-        d = a.copy()
-        c |= b
-        d |= list(b.items())
-        expected = OrderedDict({0: 0, 1: 1, 2: 2, 3: 3})
-        self.assertEqual(a | dict(b), expected)
-        self.assertEqual(a | b, expected)
-        self.assertEqual(c, expected)
-        self.assertEqual(d, expected)
-
-        c = b.copy()
-        c |= a
-        expected = OrderedDict({1: 1, 2: 1, 3: 3, 0: 0})
-        self.assertEqual(dict(b) | a, expected)
-        self.assertEqual(b | a, expected)
-        self.assertEqual(c, expected)
-
-        self.assertIs(type(a | b), OrderedDict)
-        self.assertIs(type(dict(a) | b), OrderedDict)
-        self.assertIs(type(a | dict(b)), OrderedDict)
-
-        expected = a.copy()
-        a |= ()
-        a |= ""
-        self.assertEqual(a, expected)
-
-        with self.assertRaises(TypeError):
-            a | None
-        with self.assertRaises(TypeError):
-            a | ()
-        with self.assertRaises(TypeError):
-            a | "BAD"
-        with self.assertRaises(TypeError):
-            a | ""
-        with self.assertRaises(ValueError):
-            a |= "BAD"
-
-    @support.cpython_only
-    def test_ordered_dict_items_result_gc(self):
-        # bpo-42536: OrderedDict.items's tuple-reuse speed trick breaks the GC's
-        # assumptions about what can be untracked. Make sure we re-track result
-        # tuples whenever we reuse them.
-        it = iter(self.OrderedDict({None: []}).items())
-        gc.collect()
-        # That GC collection probably untracked the recycled internal result
-        # tuple, which is initialized to (None, None). Make sure it's re-tracked
-        # when it's mutated and returned from __next__:
-        self.assertTrue(gc.is_tracked(next(it)))
 
 class PurePythonOrderedDictTests(OrderedDictTests, unittest.TestCase):
 
@@ -751,21 +690,20 @@ class CPythonOrderedDictTests(OrderedDictTests, unittest.TestCase):
         size = support.calcobjsize
         check = self.check_sizeof
 
-        basicsize = size('nQ2P' + '3PnPn2P')
-        keysize = calcsize('2nP2n')
+        basicsize = size('nQ2P' + '3PnPn2P') + calcsize('2nP2n')
 
         entrysize = calcsize('n2P')
         p = calcsize('P')
         nodesize = calcsize('Pn2P')
 
         od = OrderedDict()
-        check(od, basicsize)  # 8byte indices + 8*2//3 * entry table
+        check(od, basicsize + 8 + 5*entrysize)  # 8byte indices + 8*2//3 * entry table
         od.x = 1
-        check(od, basicsize)
+        check(od, basicsize + 8 + 5*entrysize)
         od.update([(i, i) for i in range(3)])
-        check(od, basicsize + keysize + 8*p + 8 + 5*entrysize + 3*nodesize)
+        check(od, basicsize + 8*p + 8 + 5*entrysize + 3*nodesize)
         od.update([(i, i) for i in range(3, 10)])
-        check(od, basicsize + keysize + 16*p + 16 + 10*entrysize + 10*nodesize)
+        check(od, basicsize + 16*p + 16 + 10*entrysize + 10*nodesize)
 
         check(od.keys(), size('P'))
         check(od.items(), size('P'))
@@ -810,26 +748,6 @@ class CPythonOrderedDictTests(OrderedDictTests, unittest.TestCase):
                     unpickled = pickle.loads(p)
                     self.assertEqual(list(unpickled), expected)
                     self.assertEqual(list(it), expected)
-
-    @support.cpython_only
-    def test_weakref_list_is_not_traversed(self):
-        # Check that the weakref list is not traversed when collecting
-        # OrderedDict objects. See bpo-39778 for more information.
-
-        gc.collect()
-
-        x = self.OrderedDict()
-        x.cycle = x
-
-        cycle = []
-        cycle.append(cycle)
-
-        x_ref = weakref.ref(x)
-        cycle.append(x_ref)
-
-        del x, cycle, x_ref
-
-        gc.collect()
 
 
 class PurePythonOrderedDictSubclassTests(PurePythonOrderedDictTests):

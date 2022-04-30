@@ -1,6 +1,5 @@
 import unittest
-from test.support.import_helper import import_module
-
+from test.support import import_module
 
 ctypes_test = import_module('ctypes.test')
 

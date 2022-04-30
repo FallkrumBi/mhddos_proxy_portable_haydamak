@@ -47,16 +47,8 @@ def format_shell_args(args):
     return ' '.join(args)
 
 
-def python_cmd():
-    cmd = [sys.executable]
-    cmd.extend(subprocess._args_from_interpreter_flags())
-    cmd.extend(subprocess._optim_args_from_interpreter_flags())
-    return cmd
-
-
 def list_cases(args):
-    cmd = python_cmd()
-    cmd.extend(['-m', 'test', '--list-cases'])
+    cmd = [sys.executable, '-m', 'test', '--list-cases']
     cmd.extend(args.test_args)
     proc = subprocess.run(cmd,
                           stdout=subprocess.PIPE,
@@ -76,8 +68,7 @@ def run_tests(args, tests, huntrleaks=None):
     try:
         write_tests(tmp, tests)
 
-        cmd = python_cmd()
-        cmd.extend(['-m', 'test', '--matchfile', tmp])
+        cmd = [sys.executable, '-m', 'test', '--matchfile', tmp]
         cmd.extend(args.test_args)
         print("+ %s" % format_shell_args(cmd))
         proc = subprocess.run(cmd)
@@ -109,9 +100,6 @@ def parse_args():
 
 def main():
     args = parse_args()
-    if '-w' in args.test_args or '--verbose2' in args.test_args:
-        print("WARNING: -w/--verbose2 option should not be used to bisect!")
-        print()
 
     if args.input:
         with open(args.input) as fp:

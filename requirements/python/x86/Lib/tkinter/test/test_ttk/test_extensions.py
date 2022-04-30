@@ -2,8 +2,8 @@ import sys
 import unittest
 import tkinter
 from tkinter import ttk
-from test.support import requires, run_unittest
-from tkinter.test.support import AbstractTkTest, AbstractDefaultRootTest
+from test.support import requires, run_unittest, swap_attr
+from tkinter.test.support import AbstractTkTest, destroy_default_root
 
 requires('gui')
 
@@ -45,6 +45,20 @@ class LabeledScaleTest(AbstractTkTest, unittest.TestCase):
         ttk.LabeledScale(self.root, variable=myvar)
         if hasattr(sys, 'last_type'):
             self.assertNotEqual(sys.last_type, tkinter.TclError)
+
+
+    def test_initialization_no_master(self):
+        # no master passing
+        with swap_attr(tkinter, '_default_root', None), \
+             swap_attr(tkinter, '_support_default_root', True):
+            try:
+                x = ttk.LabeledScale()
+                self.assertIsNotNone(tkinter._default_root)
+                self.assertEqual(x.master, tkinter._default_root)
+                self.assertEqual(x.tk, tkinter._default_root.tk)
+                x.destroy()
+            finally:
+                destroy_default_root()
 
     def test_initialization(self):
         # master passing
@@ -100,6 +114,7 @@ class LabeledScaleTest(AbstractTkTest, unittest.TestCase):
     def test_horizontal_range(self):
         lscale = ttk.LabeledScale(self.root, from_=0, to=10)
         lscale.pack()
+        lscale.wait_visibility()
         lscale.update()
 
         linfo_1 = lscale.label.place_info()
@@ -129,6 +144,7 @@ class LabeledScaleTest(AbstractTkTest, unittest.TestCase):
     def test_variable_change(self):
         x = ttk.LabeledScale(self.root)
         x.pack()
+        x.wait_visibility()
         x.update()
 
         curr_xcoord = x.scale.coords()[0]
@@ -171,6 +187,7 @@ class LabeledScaleTest(AbstractTkTest, unittest.TestCase):
     def test_resize(self):
         x = ttk.LabeledScale(self.root)
         x.pack(expand=True, fill='both')
+        x.wait_visibility()
         x.update()
 
         width, height = x.master.winfo_width(), x.master.winfo_height()
@@ -251,6 +268,7 @@ class OptionMenuTest(AbstractTkTest, unittest.TestCase):
 
         # check that variable is updated correctly
         optmenu.pack()
+        optmenu.wait_visibility()
         optmenu['menu'].invoke(0)
         self.assertEqual(optmenu._variable.get(), items[0])
 
@@ -281,7 +299,9 @@ class OptionMenuTest(AbstractTkTest, unittest.TestCase):
         textvar2 = tkinter.StringVar(self.root)
         optmenu2 = ttk.OptionMenu(self.root, textvar2, default, *items)
         optmenu.pack()
+        optmenu.wait_visibility()
         optmenu2.pack()
+        optmenu2.wait_visibility()
         optmenu['menu'].invoke(1)
         optmenu2['menu'].invoke(2)
         optmenu_stringvar_name = optmenu['menu'].entrycget(0, 'variable')
@@ -297,13 +317,7 @@ class OptionMenuTest(AbstractTkTest, unittest.TestCase):
         optmenu2.destroy()
 
 
-class DefaultRootTest(AbstractDefaultRootTest, unittest.TestCase):
-
-    def test_labeledscale(self):
-        self._test_widget(ttk.LabeledScale)
-
-
-tests_gui = (LabeledScaleTest, OptionMenuTest, DefaultRootTest)
+tests_gui = (LabeledScaleTest, OptionMenuTest)
 
 if __name__ == "__main__":
     run_unittest(*tests_gui)

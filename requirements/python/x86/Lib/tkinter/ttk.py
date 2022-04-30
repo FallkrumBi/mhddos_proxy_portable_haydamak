@@ -28,6 +28,8 @@ __all__ = ["Button", "Checkbutton", "Combobox", "Entry", "Frame", "Label",
 import tkinter
 from tkinter import _flatten, _join, _stringify, _splitdict
 
+_sentinel = object()
+
 # Verify if Tk is new enough to not need the Tile package
 _REQUIRE_TILE = True if tkinter.TkVersion < 8.5 else False
 
@@ -81,6 +83,8 @@ def _mapdict_values(items):
     #   ['active selected', 'grey', 'focus', [1, 2, 3, 4]]
     opt_val = []
     for *state, val in items:
+        # hacks for backward compatibility
+        state[0] # raise IndexError if empty
         if len(state) == 1:
             # if it is empty (something that evaluates to False), then
             # format it to Tcl code to denote the "normal" state
@@ -241,22 +245,19 @@ def _script_from_settings(settings):
 def _list_from_statespec(stuple):
     """Construct a list from the given statespec tuple according to the
     accepted statespec accepted by _format_mapdict."""
-    if isinstance(stuple, str):
-        return stuple
-    result = []
-    it = iter(stuple)
-    for state, val in zip(it, it):
-        if hasattr(state, 'typename'):  # this is a Tcl object
-            state = str(state).split()
-        elif isinstance(state, str):
-            state = state.split()
-        elif not isinstance(state, (tuple, list)):
-            state = (state,)
-        if hasattr(val, 'typename'):
+    nval = []
+    for val in stuple:
+        typename = getattr(val, 'typename', None)
+        if typename is None:
+            nval.append(val)
+        else: # this is a Tcl object
             val = str(val)
-        result.append((*state, val))
+            if typename == 'StateSpec':
+                val = val.split()
+            nval.append(val)
 
-    return result
+    it = iter(nval)
+    return [_flatten(spec) for spec in zip(it, it)]
 
 def _list_from_layouttuple(tk, ltuple):
     """Construct a list from the tuple returned by ttk::layout, this is
@@ -349,7 +350,12 @@ def setup_master(master=None):
     If it is not allowed to use the default root and master is None,
     RuntimeError is raised."""
     if master is None:
-        master = tkinter._get_default_root()
+        if tkinter._support_default_root:
+            master = tkinter._default_root or tkinter.Tk()
+        else:
+            raise RuntimeError(
+                    "No master specified and tkinter is "
+                    "configured to not support default root")
     return master
 
 
@@ -391,12 +397,13 @@ class Style(object):
         or something else of your preference. A statespec is compound of
         one or more states and then a value."""
         if query_opt is not None:
-            result = self.tk.call(self._name, "map", style, '-%s' % query_opt)
-            return _list_from_statespec(self.tk.splitlist(result))
+            return _list_from_statespec(self.tk.splitlist(
+                self.tk.call(self._name, "map", style, '-%s' % query_opt)))
 
-        result = self.tk.call(self._name, "map", style, *_format_mapdict(kw))
-        return {k: _list_from_statespec(self.tk.splitlist(v))
-                for k, v in _splitdict(self.tk, result).items()}
+        return _splitdict(
+            self.tk,
+            self.tk.call(self._name, "map", style, *_format_mapdict(kw)),
+            conv=_tclobj_to_py)
 
 
     def lookup(self, style, option, state=None, default=None):
@@ -569,7 +576,7 @@ class Widget(tkinter.Widget):
         matches statespec. statespec is expected to be a sequence."""
         ret = self.tk.getboolean(
                 self.tk.call(self._w, "instate", ' '.join(statespec)))
-        if ret and callback is not None:
+        if ret and callback:
             return callback(*args, **kw)
 
         return ret
@@ -1079,12 +1086,11 @@ class Scale(Widget, tkinter.Scale):
 
         Setting a value for any of the "from", "from_" or "to" options
         generates a <<RangeChanged>> event."""
-        retval = Widget.configure(self, cnf, **kw)
-        if not isinstance(cnf, (type(None), str)):
+        if cnf:
             kw.update(cnf)
+        Widget.configure(self, **kw)
         if any(['from' in kw, 'from_' in kw, 'to' in kw]):
             self.event_generate('<<RangeChanged>>')
-        return retval
 
 
     def get(self, x=None, y=None):
@@ -1417,9 +1423,26 @@ class Treeview(Widget, tkinter.XView, tkinter.YView):
         self.tk.call(self._w, "see", item)
 
 
-    def selection(self):
+    def selection(self, selop=_sentinel, items=None):
         """Returns the tuple of selected items."""
-        return self.tk.splitlist(self.tk.call(self._w, "selection"))
+        if selop is _sentinel:
+            selop = None
+        elif selop is None:
+            import warnings
+            warnings.warn(
+                "The selop=None argument of selection() is deprecated "
+                "and will be removed in Python 3.8",
+                DeprecationWarning, 3)
+        elif selop in ('set', 'add', 'remove', 'toggle'):
+            import warnings
+            warnings.warn(
+                "The selop argument of selection() is deprecated "
+                "and will be removed in Python 3.8, "
+                "use selection_%s() instead" % (selop,),
+                DeprecationWarning, 3)
+        else:
+            raise TypeError('Unsupported operation')
+        return self.tk.splitlist(self.tk.call(self._w, "selection", selop, items))
 
 
     def _selection(self, selop, items):
@@ -1533,10 +1556,7 @@ class LabeledScale(Frame):
         scale_side = 'bottom' if self._label_top else 'top'
         label_side = 'top' if scale_side == 'bottom' else 'bottom'
         self.scale.pack(side=scale_side, fill='x')
-        # Dummy required to make frame correct height
-        dummy = Label(self)
-        dummy.pack(side=label_side)
-        dummy.lower()
+        tmp = Label(self).pack(side=label_side) # place holder
         self.label.place(anchor='n' if label_side == 'top' else 's')
 
         # update the label as scale or variable changes

@@ -529,20 +529,10 @@ class ClassTests(unittest.TestCase):
             # In debug mode, printed XXX undetected error and
             #  raises AttributeError
             I()
-        except AttributeError:
+        except AttributeError as x:
             pass
         else:
             self.fail("attribute error for I.__init__ got masked")
-
-    def assertNotOrderable(self, a, b):
-        with self.assertRaises(TypeError):
-            a < b
-        with self.assertRaises(TypeError):
-            a > b
-        with self.assertRaises(TypeError):
-            a <= b
-        with self.assertRaises(TypeError):
-            a >= b
 
     def testHashComparisonOfMethods(self):
         # Test comparison and hash of methods
@@ -554,30 +544,24 @@ class ClassTests(unittest.TestCase):
             def g(self):
                 pass
             def __eq__(self, other):
-                return True
+                return self.x == other.x
             def __hash__(self):
-                raise TypeError
+                return self.x
         class B(A):
             pass
 
         a1 = A(1)
-        a2 = A(1)
-        self.assertTrue(a1.f == a1.f)
-        self.assertFalse(a1.f != a1.f)
-        self.assertFalse(a1.f == a2.f)
-        self.assertTrue(a1.f != a2.f)
-        self.assertFalse(a1.f == a1.g)
-        self.assertTrue(a1.f != a1.g)
-        self.assertNotOrderable(a1.f, a1.f)
+        a2 = A(2)
+        self.assertEqual(a1.f, a1.f)
+        self.assertNotEqual(a1.f, a2.f)
+        self.assertNotEqual(a1.f, a1.g)
+        self.assertEqual(a1.f, A(1).f)
         self.assertEqual(hash(a1.f), hash(a1.f))
+        self.assertEqual(hash(a1.f), hash(A(1).f))
 
-        self.assertFalse(A.f == a1.f)
-        self.assertTrue(A.f != a1.f)
-        self.assertFalse(A.f == A.g)
-        self.assertTrue(A.f != A.g)
-        self.assertTrue(B.f == A.f)
-        self.assertFalse(B.f != A.f)
-        self.assertNotOrderable(A.f, A.f)
+        self.assertNotEqual(A.f, a1.f)
+        self.assertNotEqual(A.f, A.g)
+        self.assertEqual(B.f, A.f)
         self.assertEqual(hash(B.f), hash(A.f))
 
         # the following triggers a SystemError in 2.4

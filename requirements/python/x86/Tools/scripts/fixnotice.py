@@ -73,19 +73,22 @@ def main():
         elif opt == '--dry-run':
             DRYRUN = 1
         elif opt == '--oldnotice':
-            with open(arg) as fp:
-                OLD_NOTICE = fp.read()
+            fp = open(arg)
+            OLD_NOTICE = fp.read()
+            fp.close()
         elif opt == '--newnotice':
-            with open(arg) as fp:
-                NEW_NOTICE = fp.read()
+            fp = open(arg)
+            NEW_NOTICE = fp.read()
+            fp.close()
 
     for arg in args:
         process(arg)
 
 
 def process(file):
-    with open(file) as f:
-        data = f.read()
+    f = open(file)
+    data = f.read()
+    f.close()
     i = data.find(OLD_NOTICE)
     if i < 0:
         if VERBOSE:
@@ -99,8 +102,9 @@ def process(file):
     data = data[:i] + NEW_NOTICE + data[i+len(OLD_NOTICE):]
     new = file + ".new"
     backup = file + ".bak"
-    with open(new, "w") as f:
-        f.write(data)
+    f = open(new, "w")
+    f.write(data)
+    f.close()
     os.rename(file, backup)
     os.rename(new, file)
 

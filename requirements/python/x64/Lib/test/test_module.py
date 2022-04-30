@@ -1,8 +1,7 @@
 # Test the module type
 import unittest
 import weakref
-from test.support import gc_collect
-from test.support import import_helper
+from test.support import gc_collect, requires_type_collecting
 from test.support.script_helper import assert_python_ok
 
 import sys
@@ -23,7 +22,7 @@ class ModuleTests(unittest.TestCase):
         # and __doc__ is None
         foo = ModuleType.__new__(ModuleType)
         self.assertTrue(foo.__dict__ is None)
-        self.assertRaises(TypeError, dir, foo)
+        self.assertRaises(SystemError, dir, foo)
         try:
             s = foo.__name__
             self.fail("__name__ = %s" % repr(s))
@@ -102,6 +101,7 @@ class ModuleTests(unittest.TestCase):
         gc_collect()
         self.assertEqual(f().__dict__["bar"], 4)
 
+    @requires_type_collecting
     def test_clear_dict_in_ref_cycle(self):
         destroyed = []
         m = ModuleType("foo")
@@ -266,6 +266,7 @@ a = A(destroyed)"""
         self.assertEqual(r[-len(ends_with):], ends_with,
                          '{!r} does not end with {!r}'.format(r, ends_with))
 
+    @requires_type_collecting
     def test_module_finalization_at_shutdown(self):
         # Module globals and builtins should still be available during shutdown
         rc, out, err = assert_python_ok("-c", "from test import final_a")
@@ -286,60 +287,6 @@ a = A(destroyed)"""
         class M(ModuleType):
             melon = Descr()
         self.assertRaises(RuntimeError, getattr, M("mymod"), "melon")
-
-    def test_lazy_create_annotations(self):
-        # module objects lazy create their __annotations__ dict on demand.
-        # the annotations dict is stored in module.__dict__.
-        # a freshly created module shouldn't have an annotations dict yet.
-        foo = ModuleType("foo")
-        for i in range(4):
-            self.assertFalse("__annotations__" in foo.__dict__)
-            d = foo.__annotations__
-            self.assertTrue("__annotations__" in foo.__dict__)
-            self.assertEqual(foo.__annotations__, d)
-            self.assertEqual(foo.__dict__['__annotations__'], d)
-            if i % 2:
-                del foo.__annotations__
-            else:
-                del foo.__dict__['__annotations__']
-
-    def test_setting_annotations(self):
-        foo = ModuleType("foo")
-        for i in range(4):
-            self.assertFalse("__annotations__" in foo.__dict__)
-            d = {'a': int}
-            foo.__annotations__ = d
-            self.assertTrue("__annotations__" in foo.__dict__)
-            self.assertEqual(foo.__annotations__, d)
-            self.assertEqual(foo.__dict__['__annotations__'], d)
-            if i % 2:
-                del foo.__annotations__
-            else:
-                del foo.__dict__['__annotations__']
-
-    def test_annotations_getset_raises(self):
-        # module has no dict, all operations fail
-        foo = ModuleType.__new__(ModuleType)
-        with self.assertRaises(TypeError):
-            print(foo.__annotations__)
-        with self.assertRaises(TypeError):
-            foo.__annotations__ = {}
-        with self.assertRaises(TypeError):
-            del foo.__annotations__
-
-        # double delete
-        foo = ModuleType("foo")
-        foo.__annotations__ = {}
-        del foo.__annotations__
-        with self.assertRaises(AttributeError):
-            del foo.__annotations__
-
-    def test_annotations_are_created_correctly(self):
-        ann_module4 = import_helper.import_fresh_module('test.ann_module4')
-        self.assertTrue("__annotations__" in ann_module4.__dict__)
-        del ann_module4.__annotations__
-        self.assertFalse("__annotations__" in ann_module4.__dict__)
-
 
     # frozen and namespace module reprs are tested in importlib.
 

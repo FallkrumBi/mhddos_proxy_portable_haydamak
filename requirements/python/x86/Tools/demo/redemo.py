@@ -96,6 +96,7 @@ class ReDemo:
         flags = 0
         for var in self.vars:
             flags = flags | var.get()
+        flags = flags
         return flags
 
     def recompile(self, event=None):

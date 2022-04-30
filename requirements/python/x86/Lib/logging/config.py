@@ -48,7 +48,7 @@ RESET_ERROR = errno.ECONNRESET
 #   _listener holds the server object doing the listening
 _listener = None
 
-def fileConfig(fname, defaults=None, disable_existing_loggers=True, encoding=None):
+def fileConfig(fname, defaults=None, disable_existing_loggers=True):
     """
     Read the logging configuration from a ConfigParser-format file.
 
@@ -66,8 +66,7 @@ def fileConfig(fname, defaults=None, disable_existing_loggers=True, encoding=Non
         if hasattr(fname, 'readline'):
             cp.read_file(fname)
         else:
-            encoding = io.text_encoding(encoding)
-            cp.read(fname, encoding=encoding)
+            cp.read(fname)
 
     formatters = _create_formatters(cp)
 
@@ -144,7 +143,6 @@ def _install_handlers(cp, formatters):
         kwargs = section.get("kwargs", '{}')
         kwargs = eval(kwargs, vars(logging))
         h = klass(*args, **kwargs)
-        h.name = hand
         if "level" in section:
             level = section["level"]
             h.setLevel(level)
@@ -449,7 +447,7 @@ class BaseConfigurator(object):
             value = ConvertingList(value)
             value.configurator = self
         elif not isinstance(value, ConvertingTuple) and\
-                 isinstance(value, tuple) and not hasattr(value, '_fields'):
+                 isinstance(value, tuple):
             value = ConvertingTuple(value)
             value.configurator = self
         elif isinstance(value, str): # str for py3k
@@ -669,19 +667,11 @@ class DictConfigurator(BaseConfigurator):
             dfmt = config.get('datefmt', None)
             style = config.get('style', '%')
             cname = config.get('class', None)
-
             if not cname:
                 c = logging.Formatter
             else:
                 c = _resolve(cname)
-
-            # A TypeError would be raised if "validate" key is passed in with a formatter callable
-            # that does not accept "validate" as a parameter
-            if 'validate' in config:  # if user hasn't mentioned it, the default will be fine
-                result = c(fmt, dfmt, style, config['validate'])
-            else:
-                result = c(fmt, dfmt, style)
-
+            result = c(fmt, dfmt, style)
         return result
 
     def configure_filter(self, config):

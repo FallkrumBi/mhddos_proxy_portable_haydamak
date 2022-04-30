@@ -353,7 +353,8 @@ class FormatRegion:
             maxvalue=16)
 
 
-class Indents:
+# With mixed indents not allowed, these are semi-useless and not unittested.
+class Indents:  # pragma: no cover
     "Change future indents."
 
     def __init__(self, editwin):
@@ -407,16 +408,6 @@ class Rstrip:  # 'Strip Trailing Whitespace" on "Format" menu.
             # only call it when needed to actually delete something.
             if cut < raw:
                 text.delete('%i.%i' % (cur, cut), '%i.end' % cur)
-
-        if (text.get('end-2c') == '\n'  # File ends with at least 1 newline;
-            and not hasattr(self.editwin, 'interp')):  # & is not Shell.
-            # Delete extra user endlines.
-            while (text.index('end-1c') > '1.0'  # Stop if file empty.
-                   and text.get('end-3c') == '\n'):
-                text.delete('end-3c')
-            # Because tk indexes are slice indexes and never raise,
-            # a file with only newlines will be emptied.
-            # patchcheck.py does the same.
 
         undo.undo_block_stop()
 

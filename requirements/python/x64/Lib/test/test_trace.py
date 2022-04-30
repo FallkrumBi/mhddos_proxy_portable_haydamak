@@ -1,7 +1,6 @@
 import os
 import sys
-from test.support import captured_stdout
-from test.support.os_helper import (TESTFN, rmtree, unlink)
+from test.support import TESTFN, rmtree, unlink, captured_stdout
 from test.support.script_helper import assert_python_ok, assert_python_failure
 import textwrap
 import unittest
@@ -78,19 +77,6 @@ def traced_caller_list_comprehension():
     k = 10
     mylist = [traced_doubler(i) for i in range(k)]
     return mylist
-
-def traced_decorated_function():
-    def decorator1(f):
-        return f
-    def decorator_fabric():
-        def decorator2(f):
-            return f
-        return decorator2
-    @decorator1
-    @decorator_fabric()
-    def func():
-        pass
-    func()
 
 
 class TracedClass(object):
@@ -181,7 +167,7 @@ class TestLineCounts(unittest.TestCase):
         firstlineno_called = get_firstlineno(traced_doubler)
         expected = {
             (self.my_py_filename, firstlineno_calling + 1): 1,
-            # List comprehensions work differently in 3.x, so the count
+            # List compehentions work differently in 3.x, so the count
             # below changed compared to 2.x.
             (self.my_py_filename, firstlineno_calling + 2): 12,
             (self.my_py_filename, firstlineno_calling + 3): 1,
@@ -189,24 +175,6 @@ class TestLineCounts(unittest.TestCase):
         }
         self.assertEqual(self.tracer.results().counts, expected)
 
-    def test_traced_decorated_function(self):
-        self.tracer.runfunc(traced_decorated_function)
-
-        firstlineno = get_firstlineno(traced_decorated_function)
-        expected = {
-            (self.my_py_filename, firstlineno + 1): 1,
-            (self.my_py_filename, firstlineno + 2): 1,
-            (self.my_py_filename, firstlineno + 3): 1,
-            (self.my_py_filename, firstlineno + 4): 1,
-            (self.my_py_filename, firstlineno + 5): 1,
-            (self.my_py_filename, firstlineno + 6): 1,
-            (self.my_py_filename, firstlineno + 7): 1,
-            (self.my_py_filename, firstlineno + 8): 1,
-            (self.my_py_filename, firstlineno + 9): 1,
-            (self.my_py_filename, firstlineno + 10): 1,
-            (self.my_py_filename, firstlineno + 11): 1,
-        }
-        self.assertEqual(self.tracer.results().counts, expected)
 
     def test_linear_methods(self):
         # XXX todo: later add 'static_method_linear' and 'class_method_linear'
@@ -223,7 +191,6 @@ class TestLineCounts(unittest.TestCase):
                 (self.my_py_filename, firstlineno + 1): 1,
             }
             self.assertEqual(tracer.results().counts, expected)
-
 
 class TestRunExecCounts(unittest.TestCase):
     """A simple sanity test of line-counting, via runctx (exec)"""
@@ -277,8 +244,8 @@ class TestFuncs(unittest.TestCase):
     def test_arg_errors(self):
         res = self.tracer.runfunc(traced_capturer, 1, 2, self=3, func=4)
         self.assertEqual(res, ((1, 2), {'self': 3, 'func': 4}))
-        with self.assertRaises(TypeError):
-            self.tracer.runfunc(func=traced_capturer, arg=1)
+        res = self.tracer.runfunc(func=traced_capturer, arg=1)
+        self.assertEqual(res, ((), {'arg': 1}))
         with self.assertRaises(TypeError):
             self.tracer.runfunc()
 
@@ -304,18 +271,6 @@ class TestFuncs(unittest.TestCase):
             self.filemod + ('TracedClass.inst_method_calling',): 1,
             self.filemod + ('TracedClass.inst_method_linear',): 1,
             self.filemod + ('traced_func_linear',): 1,
-        }
-        self.assertEqual(self.tracer.results().calledfuncs, expected)
-
-    def test_traced_decorated_function(self):
-        self.tracer.runfunc(traced_decorated_function)
-
-        expected = {
-            self.filemod + ('traced_decorated_function',): 1,
-            self.filemod + ('decorator_fabric',): 1,
-            self.filemod + ('decorator2',): 1,
-            self.filemod + ('decorator1',): 1,
-            self.filemod + ('func',): 1,
         }
         self.assertEqual(self.tracer.results().calledfuncs, expected)
 
@@ -429,10 +384,9 @@ class TestCoverageCommandLineOutput(unittest.TestCase):
     coverfile = 'tmp.cover'
 
     def setUp(self):
-        with open(self.codefile, 'w', encoding='iso-8859-15') as f:
+        with open(self.codefile, 'w') as f:
             f.write(textwrap.dedent('''\
-                # coding: iso-8859-15
-                x = 'spœm'
+                x = 42
                 if []:
                     print('unreachable')
             '''))
@@ -453,10 +407,9 @@ class TestCoverageCommandLineOutput(unittest.TestCase):
         self.assertEqual(stderr, b'')
         self.assertFalse(os.path.exists(tracecoverpath))
         self.assertTrue(os.path.exists(self.coverfile))
-        with open(self.coverfile, encoding='iso-8859-15') as f:
+        with open(self.coverfile) as f:
             self.assertEqual(f.read(),
-                "       # coding: iso-8859-15\n"
-                "    1: x = 'spœm'\n"
+                "    1: x = 42\n"
                 "    1: if []:\n"
                 "           print('unreachable')\n"
             )
@@ -465,10 +418,9 @@ class TestCoverageCommandLineOutput(unittest.TestCase):
         argv = '-m trace --count --missing'.split() + [self.codefile]
         status, stdout, stderr = assert_python_ok(*argv)
         self.assertTrue(os.path.exists(self.coverfile))
-        with open(self.coverfile, encoding='iso-8859-15') as f:
+        with open(self.coverfile) as f:
             self.assertEqual(f.read(), textwrap.dedent('''\
-                       # coding: iso-8859-15
-                    1: x = 'spœm'
+                    1: x = 42
                     1: if []:
                 >>>>>>     print('unreachable')
             '''))
@@ -477,7 +429,7 @@ class TestCommandLine(unittest.TestCase):
 
     def test_failures(self):
         _errors = (
-            (b'progname is missing: required with the main options', '-l', '-T'),
+            (b'filename is missing: required with the main options', '-l', '-T'),
             (b'cannot specify both --listfuncs and (--trace or --count)', '-lc'),
             (b'argument -R/--no-report: not allowed with argument -r/--report', '-rR'),
             (b'must specify one of --trace, --count, --report, --listfuncs, or --trackcalls', '-g'),
@@ -489,33 +441,26 @@ class TestCommandLine(unittest.TestCase):
             self.assertIn(message, stderr)
 
     def test_listfuncs_flag_success(self):
-        filename = TESTFN + '.py'
-        modulename = os.path.basename(TESTFN)
-        with open(filename, 'w', encoding='utf-8') as fd:
-            self.addCleanup(unlink, filename)
+        with open(TESTFN, 'w') as fd:
+            self.addCleanup(unlink, TESTFN)
             fd.write("a = 1\n")
-            status, stdout, stderr = assert_python_ok('-m', 'trace', '-l', filename,
-                                                      PYTHONIOENCODING='utf-8')
+            status, stdout, stderr = assert_python_ok('-m', 'trace', '-l', TESTFN)
             self.assertIn(b'functions called:', stdout)
-            expected = f'filename: {filename}, modulename: {modulename}, funcname: <module>'
-            self.assertIn(expected.encode(), stdout)
 
     def test_sys_argv_list(self):
-        with open(TESTFN, 'w', encoding='utf-8') as fd:
+        with open(TESTFN, 'w') as fd:
             self.addCleanup(unlink, TESTFN)
             fd.write("import sys\n")
             fd.write("print(type(sys.argv))\n")
 
         status, direct_stdout, stderr = assert_python_ok(TESTFN)
-        status, trace_stdout, stderr = assert_python_ok('-m', 'trace', '-l', TESTFN,
-                                                        PYTHONIOENCODING='utf-8')
+        status, trace_stdout, stderr = assert_python_ok('-m', 'trace', '-l', TESTFN)
         self.assertIn(direct_stdout.strip(), trace_stdout)
 
     def test_count_and_summary(self):
         filename = f'{TESTFN}.py'
         coverfilename = f'{TESTFN}.cover'
-        modulename = os.path.basename(TESTFN)
-        with open(filename, 'w', encoding='utf-8') as fd:
+        with open(filename, 'w') as fd:
             self.addCleanup(unlink, filename)
             self.addCleanup(unlink, coverfilename)
             fd.write(textwrap.dedent("""\
@@ -528,17 +473,11 @@ class TestCommandLine(unittest.TestCase):
                 for i in range(10):
                     f()
             """))
-        status, stdout, _ = assert_python_ok('-m', 'trace', '-cs', filename,
-                                             PYTHONIOENCODING='utf-8')
+        status, stdout, _ = assert_python_ok('-m', 'trace', '-cs', filename)
         stdout = stdout.decode()
         self.assertEqual(status, 0)
         self.assertIn('lines   cov%   module   (path)', stdout)
-        self.assertIn(f'6   100%   {modulename}   ({filename})', stdout)
-
-    def test_run_as_module(self):
-        assert_python_ok('-m', 'trace', '-l', '--module', 'timeit', '-n', '1')
-        assert_python_failure('-m', 'trace', '-l', '--module', 'not_a_module_zzz')
-
+        self.assertIn(f'6   100%   {TESTFN}   ({filename})', stdout)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,5 @@
 from collections import deque
 import unittest
-from test.support import NEVER_EQ
 
 
 class base_set:
@@ -70,7 +69,13 @@ class TestContains(unittest.TestCase):
         # containment and equality tests involving elements that are
         # not necessarily equal to themselves
 
-        values = float('nan'), 1, None, 'abc', NEVER_EQ
+        class MyNonReflexive(object):
+            def __eq__(self, other):
+                return False
+            def __hash__(self):
+                return 28
+
+        values = float('nan'), 1, None, 'abc', MyNonReflexive()
         constructors = list, tuple, dict.fromkeys, set, frozenset, deque
         for constructor in constructors:
             container = constructor(values)

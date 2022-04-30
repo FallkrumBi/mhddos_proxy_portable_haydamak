@@ -100,20 +100,8 @@ class CallSignature:
                 self.assertEqual(args[0], mod_name)
                 self.assertIs(args[1], path)
 
-class CallSignoreSuppressImportWarning(CallSignature):
 
-    def test_no_path(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ImportWarning)
-            super().test_no_path()
-
-    def test_with_path(self):
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", ImportWarning)
-            super().test_no_path()
-
-
-class CallSignaturePEP302(CallSignoreSuppressImportWarning):
+class CallSignaturePEP302(CallSignature):
     mock_modules = util.mock_modules
     finder_name = 'find_module'
 

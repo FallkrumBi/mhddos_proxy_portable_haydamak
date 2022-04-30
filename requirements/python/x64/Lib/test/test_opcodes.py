@@ -24,16 +24,17 @@ class OpcodeTest(unittest.TestCase):
     def test_setup_annotations_line(self):
         # check that SETUP_ANNOTATIONS does not create spurious line numbers
         try:
-            with open(ann_module.__file__, encoding="utf-8") as f:
+            with open(ann_module.__file__) as f:
                 txt = f.read()
             co = compile(txt, ann_module.__file__, 'exec')
-            self.assertEqual(co.co_firstlineno, 1)
+            self.assertEqual(co.co_firstlineno, 6)
         except OSError:
             pass
 
-    def test_default_annotations_exist(self):
+    def test_no_annotations_if_not_needed(self):
         class C: pass
-        self.assertEqual(C.__annotations__, {})
+        with self.assertRaises(AttributeError):
+            C.__annotations__
 
     def test_use_existing_annotations(self):
         ns = {'__annotations__': {1: 2}}

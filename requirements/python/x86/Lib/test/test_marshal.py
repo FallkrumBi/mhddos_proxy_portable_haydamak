@@ -1,5 +1,4 @@
 from test import support
-from test.support import os_helper
 import array
 import io
 import marshal
@@ -18,13 +17,13 @@ class HelperMixin:
         new = marshal.loads(marshal.dumps(sample, *extra))
         self.assertEqual(sample, new)
         try:
-            with open(os_helper.TESTFN, "wb") as f:
+            with open(support.TESTFN, "wb") as f:
                 marshal.dump(sample, f, *extra)
-            with open(os_helper.TESTFN, "rb") as f:
+            with open(support.TESTFN, "rb") as f:
                 new = marshal.load(f)
             self.assertEqual(sample, new)
         finally:
-            os_helper.unlink(os_helper.TESTFN)
+            support.unlink(support.TESTFN)
 
 class IntTestCase(unittest.TestCase, HelperMixin):
     def test_ints(self):
@@ -159,6 +158,13 @@ class ContainerTestCase(unittest.TestCase, HelperMixin):
         for constructor in (set, frozenset):
             self.helper(constructor(self.d.keys()))
 
+    @support.cpython_only
+    def test_empty_frozenset_singleton(self):
+        # marshal.loads() must reuse the empty frozenset singleton
+        obj = frozenset()
+        obj2 = marshal.loads(marshal.dumps(obj))
+        self.assertIs(obj2, obj)
+
 
 class BufferTestCase(unittest.TestCase, HelperMixin):
 
@@ -282,20 +288,20 @@ class BugsTestCase(unittest.TestCase):
             ilen = len(interleaved)
             positions = []
             try:
-                with open(os_helper.TESTFN, 'wb') as f:
+                with open(support.TESTFN, 'wb') as f:
                     for d in data:
                         marshal.dump(d, f)
                         if ilen:
                             f.write(interleaved)
                         positions.append(f.tell())
-                with open(os_helper.TESTFN, 'rb') as f:
+                with open(support.TESTFN, 'rb') as f:
                     for i, d in enumerate(data):
                         self.assertEqual(d, marshal.load(f))
                         if ilen:
                             f.read(ilen)
                         self.assertEqual(positions[i], f.tell())
             finally:
-                os_helper.unlink(os_helper.TESTFN)
+                support.unlink(support.TESTFN)
 
     def test_loads_reject_unicode_strings(self):
         # Issue #14177: marshal.loads() should not accept unicode strings
@@ -377,7 +383,10 @@ def CollectObjectIDs(ids, obj):
     return len(ids)
 
 class InstancingTestCase(unittest.TestCase, HelperMixin):
-    keys = (123, 1.2345, 'abc', (123, 'abc'), frozenset({123, 'abc'}))
+    intobj = 123321
+    floatobj = 1.2345
+    strobj = "abcde"*3
+    dictobj = {"hello":floatobj, "goodbye":floatobj, floatobj:"hello"}
 
     def helper3(self, rsample, recursive=False, simple=False):
         #we have two instances
@@ -385,12 +394,11 @@ class InstancingTestCase(unittest.TestCase, HelperMixin):
 
         n0 = CollectObjectIDs(set(), sample)
 
-        for v in range(3, marshal.version + 1):
-            s3 = marshal.dumps(sample, v)
-            n3 = CollectObjectIDs(set(), marshal.loads(s3))
+        s3 = marshal.dumps(sample, 3)
+        n3 = CollectObjectIDs(set(), marshal.loads(s3))
 
-            #same number of instances generated
-            self.assertEqual(n3, n0)
+        #same number of instances generated
+        self.assertEqual(n3, n0)
 
         if not recursive:
             #can compare with version 2
@@ -406,54 +414,20 @@ class InstancingTestCase(unittest.TestCase, HelperMixin):
                 self.assertGreaterEqual(len(s2), len(s3))
 
     def testInt(self):
-        intobj = 123321
-        self.helper(intobj)
-        self.helper3(intobj, simple=True)
+        self.helper(self.intobj)
+        self.helper3(self.intobj, simple=True)
 
     def testFloat(self):
-        floatobj = 1.2345
-        self.helper(floatobj)
-        self.helper3(floatobj)
+        self.helper(self.floatobj)
+        self.helper3(self.floatobj)
 
     def testStr(self):
-        strobj = "abcde"*3
-        self.helper(strobj)
-        self.helper3(strobj)
-
-    def testBytes(self):
-        bytesobj = b"abcde"*3
-        self.helper(bytesobj)
-        self.helper3(bytesobj)
-
-    def testList(self):
-        for obj in self.keys:
-            listobj = [obj, obj]
-            self.helper(listobj)
-            self.helper3(listobj)
-
-    def testTuple(self):
-        for obj in self.keys:
-            tupleobj = (obj, obj)
-            self.helper(tupleobj)
-            self.helper3(tupleobj)
-
-    def testSet(self):
-        for obj in self.keys:
-            setobj = {(obj, 1), (obj, 2)}
-            self.helper(setobj)
-            self.helper3(setobj)
-
-    def testFrozenSet(self):
-        for obj in self.keys:
-            frozensetobj = frozenset({(obj, 1), (obj, 2)})
-            self.helper(frozensetobj)
-            self.helper3(frozensetobj)
+        self.helper(self.strobj)
+        self.helper3(self.strobj)
 
     def testDict(self):
-        for obj in self.keys:
-            dictobj = {"hello": obj, "goodbye": obj, obj: "hello"}
-            self.helper(dictobj)
-            self.helper3(dictobj)
+        self.helper(self.dictobj)
+        self.helper3(self.dictobj)
 
     def testModule(self):
         with open(__file__, "rb") as f:
@@ -464,11 +438,10 @@ class InstancingTestCase(unittest.TestCase, HelperMixin):
         self.helper3(code)
 
     def testRecursion(self):
-        obj = 1.2345
-        d = {"hello": obj, "goodbye": obj, obj: "hello"}
+        d = dict(self.dictobj)
         d["self"] = d
         self.helper3(d, recursive=True)
-        l = [obj, obj]
+        l = [self.dictobj]
         l.append(l)
         self.helper3(l, recursive=True)
 
@@ -517,81 +490,81 @@ class CAPI_TestCase(unittest.TestCase, HelperMixin):
 
     def test_write_long_to_file(self):
         for v in range(marshal.version + 1):
-            _testcapi.pymarshal_write_long_to_file(0x12345678, os_helper.TESTFN, v)
-            with open(os_helper.TESTFN, 'rb') as f:
+            _testcapi.pymarshal_write_long_to_file(0x12345678, support.TESTFN, v)
+            with open(support.TESTFN, 'rb') as f:
                 data = f.read()
-            os_helper.unlink(os_helper.TESTFN)
+            support.unlink(support.TESTFN)
             self.assertEqual(data, b'\x78\x56\x34\x12')
 
     def test_write_object_to_file(self):
         obj = ('\u20ac', b'abc', 123, 45.6, 7+8j, 'long line '*1000)
         for v in range(marshal.version + 1):
-            _testcapi.pymarshal_write_object_to_file(obj, os_helper.TESTFN, v)
-            with open(os_helper.TESTFN, 'rb') as f:
+            _testcapi.pymarshal_write_object_to_file(obj, support.TESTFN, v)
+            with open(support.TESTFN, 'rb') as f:
                 data = f.read()
-            os_helper.unlink(os_helper.TESTFN)
+            support.unlink(support.TESTFN)
             self.assertEqual(marshal.loads(data), obj)
 
     def test_read_short_from_file(self):
-        with open(os_helper.TESTFN, 'wb') as f:
+        with open(support.TESTFN, 'wb') as f:
             f.write(b'\x34\x12xxxx')
-        r, p = _testcapi.pymarshal_read_short_from_file(os_helper.TESTFN)
-        os_helper.unlink(os_helper.TESTFN)
+        r, p = _testcapi.pymarshal_read_short_from_file(support.TESTFN)
+        support.unlink(support.TESTFN)
         self.assertEqual(r, 0x1234)
         self.assertEqual(p, 2)
 
-        with open(os_helper.TESTFN, 'wb') as f:
+        with open(support.TESTFN, 'wb') as f:
             f.write(b'\x12')
         with self.assertRaises(EOFError):
-            _testcapi.pymarshal_read_short_from_file(os_helper.TESTFN)
-        os_helper.unlink(os_helper.TESTFN)
+            _testcapi.pymarshal_read_short_from_file(support.TESTFN)
+        support.unlink(support.TESTFN)
 
     def test_read_long_from_file(self):
-        with open(os_helper.TESTFN, 'wb') as f:
+        with open(support.TESTFN, 'wb') as f:
             f.write(b'\x78\x56\x34\x12xxxx')
-        r, p = _testcapi.pymarshal_read_long_from_file(os_helper.TESTFN)
-        os_helper.unlink(os_helper.TESTFN)
+        r, p = _testcapi.pymarshal_read_long_from_file(support.TESTFN)
+        support.unlink(support.TESTFN)
         self.assertEqual(r, 0x12345678)
         self.assertEqual(p, 4)
 
-        with open(os_helper.TESTFN, 'wb') as f:
+        with open(support.TESTFN, 'wb') as f:
             f.write(b'\x56\x34\x12')
         with self.assertRaises(EOFError):
-            _testcapi.pymarshal_read_long_from_file(os_helper.TESTFN)
-        os_helper.unlink(os_helper.TESTFN)
+            _testcapi.pymarshal_read_long_from_file(support.TESTFN)
+        support.unlink(support.TESTFN)
 
     def test_read_last_object_from_file(self):
         obj = ('\u20ac', b'abc', 123, 45.6, 7+8j)
         for v in range(marshal.version + 1):
             data = marshal.dumps(obj, v)
-            with open(os_helper.TESTFN, 'wb') as f:
+            with open(support.TESTFN, 'wb') as f:
                 f.write(data + b'xxxx')
-            r, p = _testcapi.pymarshal_read_last_object_from_file(os_helper.TESTFN)
-            os_helper.unlink(os_helper.TESTFN)
+            r, p = _testcapi.pymarshal_read_last_object_from_file(support.TESTFN)
+            support.unlink(support.TESTFN)
             self.assertEqual(r, obj)
 
-            with open(os_helper.TESTFN, 'wb') as f:
+            with open(support.TESTFN, 'wb') as f:
                 f.write(data[:1])
             with self.assertRaises(EOFError):
-                _testcapi.pymarshal_read_last_object_from_file(os_helper.TESTFN)
-            os_helper.unlink(os_helper.TESTFN)
+                _testcapi.pymarshal_read_last_object_from_file(support.TESTFN)
+            support.unlink(support.TESTFN)
 
     def test_read_object_from_file(self):
         obj = ('\u20ac', b'abc', 123, 45.6, 7+8j)
         for v in range(marshal.version + 1):
             data = marshal.dumps(obj, v)
-            with open(os_helper.TESTFN, 'wb') as f:
+            with open(support.TESTFN, 'wb') as f:
                 f.write(data + b'xxxx')
-            r, p = _testcapi.pymarshal_read_object_from_file(os_helper.TESTFN)
-            os_helper.unlink(os_helper.TESTFN)
+            r, p = _testcapi.pymarshal_read_object_from_file(support.TESTFN)
+            support.unlink(support.TESTFN)
             self.assertEqual(r, obj)
             self.assertEqual(p, len(data))
 
-            with open(os_helper.TESTFN, 'wb') as f:
+            with open(support.TESTFN, 'wb') as f:
                 f.write(data[:1])
             with self.assertRaises(EOFError):
-                _testcapi.pymarshal_read_object_from_file(os_helper.TESTFN)
-            os_helper.unlink(os_helper.TESTFN)
+                _testcapi.pymarshal_read_object_from_file(support.TESTFN)
+            support.unlink(support.TESTFN)
 
 
 if __name__ == "__main__":

@@ -14,8 +14,6 @@ import io
 import copy
 import pickle
 
-from test.support import import_helper
-
 
 class AbstractMemoryTests:
     source_bytes = b"abcdef"
@@ -364,17 +362,6 @@ class AbstractMemoryTests:
             self.assertEqual(list(reversed(m)), aslist)
             self.assertEqual(list(reversed(m)), list(m[::-1]))
 
-    def test_toreadonly(self):
-        for tp in self._types:
-            b = tp(self._source)
-            m = self._view(b)
-            mm = m.toreadonly()
-            self.assertTrue(mm.readonly)
-            self.assertTrue(memoryview(mm).readonly)
-            self.assertEqual(mm.tolist(), m.tolist())
-            mm.release()
-            m.tolist()
-
     def test_issue22668(self):
         a = array.array('H', [256, 256, 256, 256])
         x = memoryview(a)
@@ -510,7 +497,7 @@ class ArrayMemorySliceSliceTest(unittest.TestCase,
 class OtherTest(unittest.TestCase):
     def test_ctypes_cast(self):
         # Issue 15944: Allow all source formats when casting to bytes.
-        ctypes = import_helper.import_module("ctypes")
+        ctypes = test.support.import_module("ctypes")
         p6 = bytes(ctypes.c_double(0.6))
 
         d = ctypes.c_double()

@@ -3,20 +3,13 @@ Test script for doctest.
 """
 
 from test import support
-from test.support import import_helper
-from test.support import os_helper
 import doctest
 import functools
 import os
 import sys
 import importlib
-import importlib.abc
-import importlib.util
 import unittest
 import tempfile
-import shutil
-import types
-import contextlib
 
 # NOTE: There are some additional tests relating to interaction with
 #       zipimport in the test_zipimport_support test module.
@@ -444,7 +437,7 @@ We'll simulate a __file__ attr that ends in pyc:
     >>> tests = finder.find(sample_func)
 
     >>> print(tests)  # doctest: +ELLIPSIS
-    [<DocTest sample_func from test_doctest.py:28 (1 example)>]
+    [<DocTest sample_func from ...:21 (1 example)>]
 
 The exact name depends on how test_doctest was invoked, so allow for
 leading path components.
@@ -668,28 +661,22 @@ plain ol' Python and is guaranteed to be available.
 
     >>> import builtins
     >>> tests = doctest.DocTestFinder().find(builtins)
-    >>> 816 < len(tests) < 836 # approximate number of objects with docstrings
+    >>> 800 < len(tests) < 820 # approximate number of objects with docstrings
     True
     >>> real_tests = [t for t in tests if len(t.examples) > 0]
     >>> len(real_tests) # objects that actually have doctests
-    14
+    8
     >>> for t in real_tests:
     ...     print('{}  {}'.format(len(t.examples), t.name))
     ...
     1  builtins.bin
-    5  builtins.bytearray.hex
-    5  builtins.bytes.hex
     3  builtins.float.as_integer_ratio
     2  builtins.float.fromhex
     2  builtins.float.hex
     1  builtins.hex
     1  builtins.int
-    3  builtins.int.as_integer_ratio
-    2  builtins.int.bit_count
     2  builtins.int.bit_length
-    5  builtins.memoryview.hex
     1  builtins.oct
-    1  builtins.zip
 
 Note here that 'bin', 'oct', and 'hex' are functions; 'float.as_integer_ratio',
 'float.hex', and 'int.bit_length' are methods; 'float.fromhex' is a classmethod,
@@ -698,18 +685,6 @@ and 'int' is a type.
 
 
 class TestDocTestFinder(unittest.TestCase):
-
-    def test_issue35753(self):
-        # This import of `call` should trigger issue35753 when
-        # `support.run_doctest` is called due to unwrap failing,
-        # however with a patched doctest this should succeed.
-        from unittest.mock import call
-        dummy_module = types.ModuleType("dummy")
-        dummy_module.__dict__['inject_call'] = call
-        try:
-            support.run_doctest(dummy_module, verbosity=True)
-        except ValueError as e:
-            raise support.TestFailed("Doctest unwrap failed") from e
 
     def test_empty_namespace_package(self):
         pkg_name = 'doctest_empty_pkg'
@@ -720,14 +695,10 @@ class TestDocTestFinder(unittest.TestCase):
             try:
                 mod = importlib.import_module(pkg_name)
             finally:
-                import_helper.forget(pkg_name)
+                support.forget(pkg_name)
                 sys.path.pop()
+            assert doctest.DocTestFinder().find(mod) == []
 
-            include_empty_finder = doctest.DocTestFinder(exclude_empty=False)
-            exclude_empty_finder = doctest.DocTestFinder(exclude_empty=True)
-
-            self.assertEqual(len(include_empty_finder.find(mod)), 1)
-            self.assertEqual(len(exclude_empty_finder.find(mod)), 0)
 
 def test_DocTestParser(): r"""
 Unit tests for the `DocTestParser` class.
@@ -2510,7 +2481,7 @@ def test_unittest_reportflags():
 
 def test_testfile(): r"""
 Tests for the `testfile()` function.  This function runs all the
-doctest examples in a given file.  In its simple invocation, it is
+doctest examples in a given file.  In its simple invokation, it is
 called with the name of a file, which is taken to be relative to the
 calling module.  The return value is (#failures, #tests).
 
@@ -2684,52 +2655,12 @@ Test the verbose output:
     >>> sys.argv = save_argv
 """
 
-class TestImporter(importlib.abc.MetaPathFinder, importlib.abc.ResourceLoader):
-
-    def find_spec(self, fullname, path, target=None):
-        return importlib.util.spec_from_file_location(fullname, path, loader=self)
-
-    def get_data(self, path):
-        with open(path, mode='rb') as f:
-            return f.read()
-
-class TestHook:
-
-    def __init__(self, pathdir):
-        self.sys_path = sys.path[:]
-        self.meta_path = sys.meta_path[:]
-        self.path_hooks = sys.path_hooks[:]
-        sys.path.append(pathdir)
-        sys.path_importer_cache.clear()
-        self.modules_before = sys.modules.copy()
-        self.importer = TestImporter()
-        sys.meta_path.append(self.importer)
-
-    def remove(self):
-        sys.path[:] = self.sys_path
-        sys.meta_path[:] = self.meta_path
-        sys.path_hooks[:] = self.path_hooks
-        sys.path_importer_cache.clear()
-        sys.modules.clear()
-        sys.modules.update(self.modules_before)
-
-
-@contextlib.contextmanager
-def test_hook(pathdir):
-    hook = TestHook(pathdir)
-    try:
-        yield hook
-    finally:
-        hook.remove()
-
-
 def test_lineendings(): r"""
-*nix systems use \n line endings, while Windows systems use \r\n, and
-old Mac systems used \r, which Python still recognizes as a line ending.  Python
+*nix systems use \n line endings, while Windows systems use \r\n.  Python
 handles this using universal newline mode for reading files.  Let's make
 sure doctest does so (issue 8473) by creating temporary test files using each
-of the three line disciplines.  At least one will not match either the universal
-newline \n or os.linesep for the platform the test is run on.
+of the two line disciplines.  One of the two will be the "wrong" one for the
+platform the test is run on.
 
 Windows line endings first:
 
@@ -2751,47 +2682,6 @@ And now *nix line endings:
     >>> doctest.testfile(fn, module_relative=False, verbose=False)
     TestResults(failed=0, attempted=1)
     >>> os.remove(fn)
-
-And finally old Mac line endings:
-
-    >>> fn = tempfile.mktemp()
-    >>> with open(fn, 'wb') as f:
-    ...     f.write(b'Test:\r\r  >>> x = 1 + 1\r\rDone.\r')
-    30
-    >>> doctest.testfile(fn, module_relative=False, verbose=False)
-    TestResults(failed=0, attempted=1)
-    >>> os.remove(fn)
-
-Now we test with a package loader that has a get_data method, since that
-bypasses the standard universal newline handling so doctest has to do the
-newline conversion itself; let's make sure it does so correctly (issue 1812).
-We'll write a file inside the package that has all three kinds of line endings
-in it, and use a package hook to install a custom loader; on any platform,
-at least one of the line endings will raise a ValueError for inconsistent
-whitespace if doctest does not correctly do the newline conversion.
-
-    >>> dn = tempfile.mkdtemp()
-    >>> pkg = os.path.join(dn, "doctest_testpkg")
-    >>> os.mkdir(pkg)
-    >>> os_helper.create_empty_file(os.path.join(pkg, "__init__.py"))
-    >>> fn = os.path.join(pkg, "doctest_testfile.txt")
-    >>> with open(fn, 'wb') as f:
-    ...     f.write(
-    ...         b'Test:\r\n\r\n'
-    ...         b'  >>> x = 1 + 1\r\n\r\n'
-    ...         b'Done.\r\n'
-    ...         b'Test:\n\n'
-    ...         b'  >>> x = 1 + 1\n\n'
-    ...         b'Done.\n'
-    ...         b'Test:\r\r'
-    ...         b'  >>> x = 1 + 1\r\r'
-    ...         b'Done.\r'
-    ...     )
-    95
-    >>> with test_hook(dn):
-    ...     doctest.testfile("doctest_testfile.txt", package="doctest_testpkg", verbose=False)
-    TestResults(failed=0, attempted=3)
-    >>> shutil.rmtree(dn)
 
 """
 
@@ -2832,7 +2722,7 @@ Check doctest with a non-ascii filename:
     Exception raised:
         Traceback (most recent call last):
           File ...
-            exec(compile(example.source, filename, "single",
+            compileflags, 1), test.globs)
           File "<doctest foo-bär@baz[0]>", line 1, in <module>
             raise Exception('clé')
         Exception: clé
@@ -2855,11 +2745,10 @@ With those preliminaries out of the way, we'll start with a file with two
 simple tests and no errors.  We'll run both the unadorned doctest command, and
 the verbose version, and then check the output:
 
-    >>> from test.support import script_helper
-    >>> from test.support.os_helper import temp_dir
+    >>> from test.support import script_helper, temp_dir
     >>> with temp_dir() as tmpdir:
     ...     fn = os.path.join(tmpdir, 'myfile.doc')
-    ...     with open(fn, 'w', encoding='utf-8') as f:
+    ...     with open(fn, 'w') as f:
     ...         _ = f.write('This is a very simple test file.\n')
     ...         _ = f.write('   >>> 1 + 1\n')
     ...         _ = f.write('   2\n')
@@ -2907,11 +2796,10 @@ ability to process more than one file on the command line and, since the second
 file ends in '.py', its handling of python module files (as opposed to straight
 text files).
 
-    >>> from test.support import script_helper
-    >>> from test.support.os_helper import temp_dir
+    >>> from test.support import script_helper, temp_dir
     >>> with temp_dir() as tmpdir:
     ...     fn = os.path.join(tmpdir, 'myfile.doc')
-    ...     with open(fn, 'w', encoding="utf-8") as f:
+    ...     with open(fn, 'w') as f:
     ...         _ = f.write('This is another simple test file.\n')
     ...         _ = f.write('   >>> 1 + 1\n')
     ...         _ = f.write('   2\n')
@@ -2922,7 +2810,7 @@ text files).
     ...         _ = f.write('\n')
     ...         _ = f.write('And that is it.\n')
     ...     fn2 = os.path.join(tmpdir, 'myfile2.py')
-    ...     with open(fn2, 'w', encoding='utf-8') as f:
+    ...     with open(fn2, 'w') as f:
     ...         _ = f.write('def test_func():\n')
     ...         _ = f.write('   \"\"\"\n')
     ...         _ = f.write('   This is simple python test function.\n')
@@ -3052,11 +2940,10 @@ Invalid file name:
     ...         '-m', 'doctest', 'nosuchfile')
     >>> rc, out
     (1, b'')
-    >>> # The exact error message changes depending on the platform.
     >>> print(normalize(err))                    # doctest: +ELLIPSIS
     Traceback (most recent call last):
       ...
-    FileNotFoundError: [Errno ...] ...nosuchfile...
+    FileNotFoundError: [Errno ...] No such file or directory: 'nosuchfile'
 
 Invalid doctest option:
 
@@ -3127,7 +3014,7 @@ def test_main():
 
 
 def test_coverage(coverdir):
-    trace = import_helper.import_module('trace')
+    trace = support.import_module('trace')
     tracer = trace.Trace(ignoredirs=[sys.base_prefix, sys.base_exec_prefix,],
                          trace=0, count=1)
     tracer.run('test_main()')

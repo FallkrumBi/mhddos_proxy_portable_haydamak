@@ -1,10 +1,7 @@
 import unittest
 import gc
-import tkinter
 from tkinter import (Variable, StringVar, IntVar, DoubleVar, BooleanVar, Tcl,
                      TclError)
-from test.support import ALWAYS_EQ
-from tkinter.test.support import AbstractDefaultRootTest
 
 
 class Var(Variable):
@@ -58,31 +55,15 @@ class TestVariable(TestBase):
         del v2
         self.assertFalse(self.info_exists("name"))
 
-    def test_equality(self):
+    def test___eq__(self):
         # values doesn't matter, only class and name are checked
         v1 = Variable(self.root, name="abc")
         v2 = Variable(self.root, name="abc")
-        self.assertIsNot(v1, v2)
         self.assertEqual(v1, v2)
 
-        v3 = Variable(self.root, name="cba")
-        self.assertNotEqual(v1, v3)
-
+        v3 = Variable(self.root, name="abc")
         v4 = StringVar(self.root, name="abc")
-        self.assertEqual(str(v1), str(v4))
-        self.assertNotEqual(v1, v4)
-
-        V = type('Variable', (), {})
-        self.assertNotEqual(v1, V())
-
-        self.assertNotEqual(v1, object())
-        self.assertEqual(v1, ALWAYS_EQ)
-
-        root2 = tkinter.Tk()
-        self.addCleanup(root2.destroy)
-        v5 = Variable(root2, name="abc")
-        self.assertEqual(str(v1), str(v5))
-        self.assertNotEqual(v1, v5)
+        self.assertNotEqual(v3, v4)
 
     def test_invalid_name(self):
         with self.assertRaises(TypeError):
@@ -320,21 +301,8 @@ class TestBooleanVar(TestBase):
             v.get()
 
 
-class DefaultRootTest(AbstractDefaultRootTest, unittest.TestCase):
-
-    def test_variable(self):
-        self.assertRaises(RuntimeError, Variable)
-        root = tkinter.Tk()
-        v = Variable()
-        v.set("value")
-        self.assertEqual(v.get(), "value")
-        root.destroy()
-        tkinter.NoDefaultRoot()
-        self.assertRaises(RuntimeError, Variable)
-
-
 tests_gui = (TestVariable, TestStringVar, TestIntVar,
-             TestDoubleVar, TestBooleanVar, DefaultRootTest)
+             TestDoubleVar, TestBooleanVar)
 
 
 if __name__ == "__main__":

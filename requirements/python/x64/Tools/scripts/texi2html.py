@@ -118,10 +118,11 @@ class HTMLNode:
             self.lines.append(line)
 
     def flush(self):
-        with open(self.dirname + '/' + makefile(self.name), 'w') as fp:
-            fp.write(self.prologue)
-            fp.write(self.text)
-            fp.write(self.epilogue)
+        fp = open(self.dirname + '/' + makefile(self.name), 'w')
+        fp.write(self.prologue)
+        fp.write(self.text)
+        fp.write(self.epilogue)
+        fp.close()
 
     def link(self, label, nodename, rel=None, rev=None):
         if nodename:
@@ -557,14 +558,14 @@ class TexinfoParser:
         except IOError as msg:
             print('*** Can\'t open include file', repr(file))
             return
-        with fp:
-            print('!'*self.debugging, '--> file', repr(file))
-            save_done = self.done
-            save_skip = self.skip
-            save_stack = self.stack
-            self.includedepth = self.includedepth + 1
-            self.parserest(fp, 0)
-            self.includedepth = self.includedepth - 1
+        print('!'*self.debugging, '--> file', repr(file))
+        save_done = self.done
+        save_skip = self.skip
+        save_stack = self.stack
+        self.includedepth = self.includedepth + 1
+        self.parserest(fp, 0)
+        self.includedepth = self.includedepth - 1
+        fp.close()
         self.done = save_done
         self.skip = save_skip
         self.stack = save_stack
@@ -1769,75 +1770,78 @@ class HTMLHelp:
 
         # PROJECT FILE
         try:
-            with open(projectfile, 'w') as fp:
-                print('[OPTIONS]', file=fp)
-                print('Auto Index=Yes', file=fp)
-                print('Binary TOC=No', file=fp)
-                print('Binary Index=Yes', file=fp)
-                print('Compatibility=1.1', file=fp)
-                print('Compiled file=' + resultfile + '', file=fp)
-                print('Contents file=' + contentfile + '', file=fp)
-                print('Default topic=' + defaulttopic + '', file=fp)
-                print('Error log file=ErrorLog.log', file=fp)
-                print('Index file=' + indexfile + '', file=fp)
-                print('Title=' + title + '', file=fp)
-                print('Display compile progress=Yes', file=fp)
-                print('Full-text search=Yes', file=fp)
-                print('Default window=main', file=fp)
-                print('', file=fp)
-                print('[WINDOWS]', file=fp)
-                print('main=,"' + contentfile + '","' + indexfile
-                            + '","","",,,,,0x23520,222,0x1046,[10,10,780,560],'
-                            '0xB0000,,,,,,0', file=fp)
-                print('', file=fp)
-                print('[FILES]', file=fp)
-                print('', file=fp)
-                self.dumpfiles(fp)
+            fp = open(projectfile,'w')
+            print('[OPTIONS]', file=fp)
+            print('Auto Index=Yes', file=fp)
+            print('Binary TOC=No', file=fp)
+            print('Binary Index=Yes', file=fp)
+            print('Compatibility=1.1', file=fp)
+            print('Compiled file=' + resultfile + '', file=fp)
+            print('Contents file=' + contentfile + '', file=fp)
+            print('Default topic=' + defaulttopic + '', file=fp)
+            print('Error log file=ErrorLog.log', file=fp)
+            print('Index file=' + indexfile + '', file=fp)
+            print('Title=' + title + '', file=fp)
+            print('Display compile progress=Yes', file=fp)
+            print('Full-text search=Yes', file=fp)
+            print('Default window=main', file=fp)
+            print('', file=fp)
+            print('[WINDOWS]', file=fp)
+            print('main=,"' + contentfile + '","' + indexfile
+                        + '","","",,,,,0x23520,222,0x1046,[10,10,780,560],'
+                        '0xB0000,,,,,,0', file=fp)
+            print('', file=fp)
+            print('[FILES]', file=fp)
+            print('', file=fp)
+            self.dumpfiles(fp)
+            fp.close()
         except IOError as msg:
             print(projectfile, ':', msg)
             sys.exit(1)
 
         # CONTENT FILE
         try:
-            with open(contentfile, 'w') as fp:
-                print('<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">', file=fp)
-                print('<!-- This file defines the table of contents -->', file=fp)
-                print('<HTML>', file=fp)
-                print('<HEAD>', file=fp)
-                print('<meta name="GENERATOR" '
-                            'content="Microsoft&reg; HTML Help Workshop 4.1">', file=fp)
-                print('<!-- Sitemap 1.0 -->', file=fp)
-                print('</HEAD>', file=fp)
-                print('<BODY>', file=fp)
-                print('   <OBJECT type="text/site properties">', file=fp)
-                print('     <param name="Window Styles" value="0x800025">', file=fp)
-                print('     <param name="comment" value="title:">', file=fp)
-                print('     <param name="comment" value="base:">', file=fp)
-                print('   </OBJECT>', file=fp)
-                self.dumpnodes(fp)
-                print('</BODY>', file=fp)
-                print('</HTML>', file=fp)
+            fp = open(contentfile,'w')
+            print('<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">', file=fp)
+            print('<!-- This file defines the table of contents -->', file=fp)
+            print('<HTML>', file=fp)
+            print('<HEAD>', file=fp)
+            print('<meta name="GENERATOR" '
+                        'content="Microsoft&reg; HTML Help Workshop 4.1">', file=fp)
+            print('<!-- Sitemap 1.0 -->', file=fp)
+            print('</HEAD>', file=fp)
+            print('<BODY>', file=fp)
+            print('   <OBJECT type="text/site properties">', file=fp)
+            print('     <param name="Window Styles" value="0x800025">', file=fp)
+            print('     <param name="comment" value="title:">', file=fp)
+            print('     <param name="comment" value="base:">', file=fp)
+            print('   </OBJECT>', file=fp)
+            self.dumpnodes(fp)
+            print('</BODY>', file=fp)
+            print('</HTML>', file=fp)
+            fp.close()
         except IOError as msg:
             print(contentfile, ':', msg)
             sys.exit(1)
 
         # INDEX FILE
         try:
-            with open(indexfile, 'w') as fp:
-                print('<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">', file=fp)
-                print('<!-- This file defines the index -->', file=fp)
-                print('<HTML>', file=fp)
-                print('<HEAD>', file=fp)
-                print('<meta name="GENERATOR" '
-                            'content="Microsoft&reg; HTML Help Workshop 4.1">', file=fp)
-                print('<!-- Sitemap 1.0 -->', file=fp)
-                print('</HEAD>', file=fp)
-                print('<BODY>', file=fp)
-                print('<OBJECT type="text/site properties">', file=fp)
-                print('</OBJECT>', file=fp)
-                self.dumpindex(fp)
-                print('</BODY>', file=fp)
-                print('</HTML>', file=fp)
+            fp = open(indexfile  ,'w')
+            print('<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">', file=fp)
+            print('<!-- This file defines the index -->', file=fp)
+            print('<HTML>', file=fp)
+            print('<HEAD>', file=fp)
+            print('<meta name="GENERATOR" '
+                        'content="Microsoft&reg; HTML Help Workshop 4.1">', file=fp)
+            print('<!-- Sitemap 1.0 -->', file=fp)
+            print('</HEAD>', file=fp)
+            print('<BODY>', file=fp)
+            print('<OBJECT type="text/site properties">', file=fp)
+            print('</OBJECT>', file=fp)
+            self.dumpindex(fp)
+            print('</BODY>', file=fp)
+            print('</HTML>', file=fp)
+            fp.close()
         except IOError as msg:
             print(indexfile  , ':', msg)
             sys.exit(1)
@@ -2060,8 +2064,8 @@ def test():
         print(file, ':', msg)
         sys.exit(1)
 
-    with fp:
-        parser.parse(fp)
+    parser.parse(fp)
+    fp.close()
     parser.report()
 
     htmlhelp.finalize()

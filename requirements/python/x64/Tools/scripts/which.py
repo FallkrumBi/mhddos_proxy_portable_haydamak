@@ -49,7 +49,6 @@ def main():
                     msg(filename + ': not executable')
             if longlist:
                 sts = os.system('ls ' + longlist + ' ' + filename)
-                sts = os.waitstatus_to_exitcode(sts)
                 if sts: msg('"ls -l" exit status: ' + repr(sts))
         if not ident:
             msg(prog + ': not found')

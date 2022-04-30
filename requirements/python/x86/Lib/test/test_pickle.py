@@ -6,14 +6,11 @@ import io
 import collections
 import struct
 import sys
-import warnings
 import weakref
 
 import unittest
 from test import support
-from test.support import import_helper
 
-from test.pickletester import AbstractHookTests
 from test.pickletester import AbstractUnpickleTests
 from test.pickletester import AbstractPickleTests
 from test.pickletester import AbstractPickleModuleTests
@@ -21,7 +18,6 @@ from test.pickletester import AbstractPersistentPicklerTests
 from test.pickletester import AbstractIdentityPersistentPicklerTests
 from test.pickletester import AbstractPicklerUnpicklerObjectTests
 from test.pickletester import AbstractDispatchTableTests
-from test.pickletester import AbstractCustomPicklerClass
 from test.pickletester import BigmemPickleTests
 
 try:
@@ -59,9 +55,9 @@ class PyPicklerTests(AbstractPickleTests):
     pickler = pickle._Pickler
     unpickler = pickle._Unpickler
 
-    def dumps(self, arg, proto=None, **kwargs):
+    def dumps(self, arg, proto=None):
         f = io.BytesIO()
-        p = self.pickler(f, proto, **kwargs)
+        p = self.pickler(f, proto)
         p.dump(arg)
         f.seek(0)
         return bytes(f.read())
@@ -80,8 +76,8 @@ class InMemoryPickleTests(AbstractPickleTests, AbstractUnpickleTests,
                         AttributeError, ValueError,
                         struct.error, IndexError, ImportError)
 
-    def dumps(self, arg, protocol=None, **kwargs):
-        return pickle.dumps(arg, protocol, **kwargs)
+    def dumps(self, arg, protocol=None):
+        return pickle.dumps(arg, protocol)
 
     def loads(self, buf, **kwds):
         return pickle.loads(buf, **kwds)
@@ -205,13 +201,6 @@ class PyChainDispatchTableTests(AbstractDispatchTableTests):
         return collections.ChainMap({}, pickle.dispatch_table)
 
 
-class PyPicklerHookTests(AbstractHookTests):
-    class CustomPyPicklerClass(pickle._Pickler,
-                               AbstractCustomPicklerClass):
-        pass
-    pickler_class = CustomPyPicklerClass
-
-
 if has_c_implementation:
     class CPickleTests(AbstractPickleModuleTests):
         from _pickle import dump, dumps, load, loads, Pickler, Unpickler
@@ -264,17 +253,12 @@ if has_c_implementation:
         def get_dispatch_table(self):
             return collections.ChainMap({}, pickle.dispatch_table)
 
-    class CPicklerHookTests(AbstractHookTests):
-        class CustomCPicklerClass(_pickle.Pickler, AbstractCustomPicklerClass):
-            pass
-        pickler_class = CustomCPicklerClass
-
     @support.cpython_only
     class SizeofTests(unittest.TestCase):
         check_sizeof = support.check_sizeof
 
         def test_pickler(self):
-            basesize = support.calcobjsize('7P2n3i2n3i2P')
+            basesize = support.calcobjsize('6P2n3i2n3iP')
             p = _pickle.Pickler(io.BytesIO())
             self.assertEqual(object.__sizeof__(p), basesize)
             MT_size = struct.calcsize('3nP0n')
@@ -291,7 +275,7 @@ if has_c_implementation:
                 0)  # Write buffer is cleared after every dump().
 
         def test_unpickler(self):
-            basesize = support.calcobjsize('2P2n2P 2P2n2i5P 2P3n8P2n2i')
+            basesize = support.calcobjsize('2P2n2P 2P2n2i5P 2P3n6P2n2i')
             unpickler = _pickle.Unpickler
             P = struct.calcsize('P')  # Size of memo table entry.
             n = struct.calcsize('n')  # Size of mark table entry.
@@ -325,9 +309,9 @@ if has_c_implementation:
                 return data
             check_unpickler(recurse(0), 32, 0)
             check_unpickler(recurse(1), 32, 20)
-            check_unpickler(recurse(20), 32, 20)
-            check_unpickler(recurse(50), 64, 60)
-            check_unpickler(recurse(100), 128, 140)
+            check_unpickler(recurse(20), 32, 58)
+            check_unpickler(recurse(50), 64, 58)
+            check_unpickler(recurse(100), 128, 134)
 
             u = unpickler(io.BytesIO(pickle.dumps('a', 0)),
                           encoding='ASCII', errors='strict')
@@ -368,10 +352,7 @@ def getmodule(module):
         return sys.modules[module]
     except KeyError:
         try:
-            with warnings.catch_warnings():
-                action = 'always' if support.verbose else 'ignore'
-                warnings.simplefilter(action, DeprecationWarning)
-                __import__(module)
+            __import__(module)
         except AttributeError as exc:
             if support.verbose:
                 print("Can't import module %r: %s" % (module, exc))
@@ -487,8 +468,7 @@ class CompatPickleTests(unittest.TestCase):
                 if exc in (BlockingIOError,
                            ResourceWarning,
                            StopAsyncIteration,
-                           RecursionError,
-                           EncodingWarning):
+                           RecursionError):
                     continue
                 if exc is not OSError and issubclass(exc, OSError):
                     self.assertEqual(reverse_mapping('builtins', name),
@@ -505,7 +485,7 @@ class CompatPickleTests(unittest.TestCase):
                                      ('builtins', name))
 
     def test_multiprocessing_exceptions(self):
-        module = import_helper.import_module('multiprocessing.context')
+        module = support.import_module('multiprocessing.context')
         for name, exc in get_exceptions(module):
             with self.subTest(name):
                 self.assertEqual(reverse_mapping('multiprocessing.context', name),
@@ -518,7 +498,7 @@ def test_main():
     tests = [PyPickleTests, PyUnpicklerTests, PyPicklerTests,
              PyPersPicklerTests, PyIdPersPicklerTests,
              PyDispatchTableTests, PyChainDispatchTableTests,
-             CompatPickleTests, PyPicklerHookTests]
+             CompatPickleTests]
     if has_c_implementation:
         tests.extend([CPickleTests, CUnpicklerTests, CPicklerTests,
                       CPersPicklerTests, CIdPersPicklerTests,
@@ -526,7 +506,6 @@ def test_main():
                       PyPicklerUnpicklerObjectTests,
                       CPicklerUnpicklerObjectTests,
                       CDispatchTableTests, CChainDispatchTableTests,
-                      CPicklerHookTests,
                       InMemoryPickleTests, SizeofTests])
     support.run_unittest(*tests)
     support.run_doctest(pickle)

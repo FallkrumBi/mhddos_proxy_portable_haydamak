@@ -11,8 +11,8 @@ import textwrap
 from io import StringIO, BytesIO
 from itertools import chain
 from random import choice
+from socket import getfqdn
 from threading import Thread
-from unittest.mock import patch
 
 import email
 import email.policy
@@ -37,8 +37,7 @@ from email import iterators
 from email import base64mime
 from email import quoprimime
 
-from test.support import threading_helper
-from test.support.os_helper import unlink
+from test.support import unlink, start_threads
 from test.test_email import openfile, TestEmailBase
 
 # These imports are documented to work, but we are testing them using a
@@ -214,7 +213,7 @@ class TestMessageAPI(TestEmailBase):
     def test_message_rfc822_only(self):
         # Issue 7970: message/rfc822 not in multipart parsed by
         # HeaderParser caused an exception when flattened.
-        with openfile('msg_46.txt', encoding="utf-8") as fp:
+        with openfile('msg_46.txt') as fp:
             msgdata = fp.read()
         parser = HeaderParser()
         msg = parser.parsestr(msgdata)
@@ -225,7 +224,7 @@ class TestMessageAPI(TestEmailBase):
 
     def test_byte_message_rfc822_only(self):
         # Make sure new bytes header parser also passes this.
-        with openfile('msg_46.txt', encoding="utf-8") as fp:
+        with openfile('msg_46.txt') as fp:
             msgdata = fp.read().encode('ascii')
         parser = email.parser.BytesHeaderParser()
         msg = parser.parsebytes(msgdata)
@@ -274,7 +273,7 @@ class TestMessageAPI(TestEmailBase):
     def test_decoded_generator(self):
         eq = self.assertEqual
         msg = self._msgobj('msg_07.txt')
-        with openfile('msg_17.txt', encoding="utf-8") as fp:
+        with openfile('msg_17.txt') as fp:
             text = fp.read()
         s = StringIO()
         g = DecodedGenerator(s)
@@ -295,7 +294,7 @@ class TestMessageAPI(TestEmailBase):
 
     def test_as_string(self):
         msg = self._msgobj('msg_01.txt')
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             text = fp.read()
         self.assertEqual(text, str(msg))
         fullrepr = msg.as_string(unixfrom=True)
@@ -312,44 +311,9 @@ class TestMessageAPI(TestEmailBase):
         g.flatten(msg)
         self.assertEqual(fullrepr, s.getvalue())
 
-    def test_nonascii_as_string_without_cte(self):
-        m = textwrap.dedent("""\
-            MIME-Version: 1.0
-            Content-type: text/plain; charset="iso-8859-1"
-
-            Test if non-ascii messages with no Content-Transfer-Encoding set
-            can be as_string'd:
-            Föö bär
-            """)
-        source = m.encode('iso-8859-1')
-        expected = textwrap.dedent("""\
-            MIME-Version: 1.0
-            Content-type: text/plain; charset="iso-8859-1"
-            Content-Transfer-Encoding: quoted-printable
-
-            Test if non-ascii messages with no Content-Transfer-Encoding set
-            can be as_string'd:
-            F=F6=F6 b=E4r
-            """)
-        msg = email.message_from_bytes(source)
-        self.assertEqual(msg.as_string(), expected)
-
-    def test_nonascii_as_string_without_content_type_and_cte(self):
-        m = textwrap.dedent("""\
-            MIME-Version: 1.0
-
-            Test if non-ascii messages with no Content-Type nor
-            Content-Transfer-Encoding set can be as_string'd:
-            Föö bär
-            """)
-        source = m.encode('iso-8859-1')
-        expected = source.decode('ascii', 'replace')
-        msg = email.message_from_bytes(source)
-        self.assertEqual(msg.as_string(), expected)
-
     def test_as_bytes(self):
         msg = self._msgobj('msg_01.txt')
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             data = fp.read().encode('ascii')
         self.assertEqual(data, bytes(msg))
         fullrepr = msg.as_bytes(unixfrom=True)
@@ -1044,7 +1008,7 @@ Test""")
 Subject: the first part of this is short,
  but_the_second_part_does_not_fit_within_maxlinelen_and_thus_should_be_on_a_line_all_by_itself""")
 
-    def test_splittable_leading_char_followed_by_overlong_unsplittable(self):
+    def test_splittable_leading_char_followed_by_overlong_unsplitable(self):
         eq = self.ndiffAssertEqual
         h = Header(', but_the_second'
             '_part_does_not_fit_within_maxlinelen_and_thus_should_be_on_a_line'
@@ -1053,7 +1017,7 @@ Subject: the first part of this is short,
 ,
  but_the_second_part_does_not_fit_within_maxlinelen_and_thus_should_be_on_a_line_all_by_itself""")
 
-    def test_multiple_splittable_leading_char_followed_by_overlong_unsplittable(self):
+    def test_multiple_splittable_leading_char_followed_by_overlong_unsplitable(self):
         eq = self.ndiffAssertEqual
         h = Header(', , but_the_second'
             '_part_does_not_fit_within_maxlinelen_and_thus_should_be_on_a_line'
@@ -1062,14 +1026,14 @@ Subject: the first part of this is short,
 , ,
  but_the_second_part_does_not_fit_within_maxlinelen_and_thus_should_be_on_a_line_all_by_itself""")
 
-    def test_trailing_splittable_on_overlong_unsplittable(self):
+    def test_trailing_splitable_on_overlong_unsplitable(self):
         eq = self.ndiffAssertEqual
         h = Header('this_part_does_not_fit_within_maxlinelen_and_thus_should_'
             'be_on_a_line_all_by_itself;')
         eq(h.encode(), "this_part_does_not_fit_within_maxlinelen_and_thus_should_"
             "be_on_a_line_all_by_itself;")
 
-    def test_trailing_splittable_on_overlong_unsplittable_with_leading_splittable(self):
+    def test_trailing_splitable_on_overlong_unsplitable_with_leading_splitable(self):
         eq = self.ndiffAssertEqual
         h = Header('; '
             'this_part_does_not_fit_within_maxlinelen_and_thus_should_'
@@ -1502,7 +1466,7 @@ Blah blah blah
         g.flatten(msg)
         self.assertEqual(b.getvalue(), source + b'>From R\xc3\xb6lli\n')
 
-    def test_multipart_with_bad_bytes_in_cte(self):
+    def test_mutltipart_with_bad_bytes_in_cte(self):
         # bpo30835
         source = textwrap.dedent("""\
             From: aperson@example.com
@@ -2436,7 +2400,7 @@ Re: =?mac-iceland?q?r=8Aksm=9Arg=8Cs?= baz foo bar =?mac-iceland?q?r=8Aksm?=
 # Test the MIMEMessage class
 class TestMIMEMessage(TestEmailBase):
     def setUp(self):
-        with openfile('msg_11.txt', encoding="utf-8") as fp:
+        with openfile('msg_11.txt') as fp:
             self._text = fp.read()
 
     def test_type_error(self):
@@ -2555,7 +2519,7 @@ Your message cannot be delivered to the following recipients:
 
     def test_epilogue(self):
         eq = self.ndiffAssertEqual
-        with openfile('msg_21.txt', encoding="utf-8") as fp:
+        with openfile('msg_21.txt') as fp:
             text = fp.read()
         msg = Message()
         msg['From'] = 'aperson@dom.ain'
@@ -2610,7 +2574,7 @@ Two
 
     def test_default_type(self):
         eq = self.assertEqual
-        with openfile('msg_30.txt', encoding="utf-8") as fp:
+        with openfile('msg_30.txt') as fp:
             msg = email.message_from_file(fp)
         container1 = msg.get_payload(0)
         eq(container1.get_default_type(), 'message/rfc822')
@@ -2627,7 +2591,7 @@ Two
 
     def test_default_type_with_explicit_container_type(self):
         eq = self.assertEqual
-        with openfile('msg_28.txt', encoding="utf-8") as fp:
+        with openfile('msg_28.txt') as fp:
             msg = email.message_from_file(fp)
         container1 = msg.get_payload(0)
         eq(container1.get_default_type(), 'message/rfc822')
@@ -2753,7 +2717,7 @@ class TestIdempotent(TestEmailBase):
     linesep = '\n'
 
     def _msgobj(self, filename):
-        with openfile(filename, encoding="utf-8") as fp:
+        with openfile(filename) as fp:
             data = fp.read()
         msg = email.message_from_string(data)
         return msg, data
@@ -2909,7 +2873,7 @@ class TestIdempotent(TestEmailBase):
 # Test various other bits of the package's functionality
 class TestMiscellaneous(TestEmailBase):
     def test_message_from_string(self):
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             text = fp.read()
         msg = email.message_from_string(text)
         s = StringIO()
@@ -2920,7 +2884,7 @@ class TestMiscellaneous(TestEmailBase):
         self.assertEqual(text, s.getvalue())
 
     def test_message_from_file(self):
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             text = fp.read()
             fp.seek(0)
             msg = email.message_from_file(fp)
@@ -2932,7 +2896,7 @@ class TestMiscellaneous(TestEmailBase):
             self.assertEqual(text, s.getvalue())
 
     def test_message_from_string_with_class(self):
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             text = fp.read()
 
         # Create a subclass
@@ -2942,7 +2906,7 @@ class TestMiscellaneous(TestEmailBase):
         msg = email.message_from_string(text, MyMessage)
         self.assertIsInstance(msg, MyMessage)
         # Try something more complicated
-        with openfile('msg_02.txt', encoding="utf-8") as fp:
+        with openfile('msg_02.txt') as fp:
             text = fp.read()
         msg = email.message_from_string(text, MyMessage)
         for subpart in msg.walk():
@@ -2953,11 +2917,11 @@ class TestMiscellaneous(TestEmailBase):
         class MyMessage(Message):
             pass
 
-        with openfile('msg_01.txt', encoding="utf-8") as fp:
+        with openfile('msg_01.txt') as fp:
             msg = email.message_from_file(fp, MyMessage)
         self.assertIsInstance(msg, MyMessage)
         # Try something more complicated
-        with openfile('msg_02.txt', encoding="utf-8") as fp:
+        with openfile('msg_02.txt') as fp:
             msg = email.message_from_file(fp, MyMessage)
         for subpart in msg.walk():
             self.assertIsInstance(subpart, MyMessage)
@@ -3003,8 +2967,6 @@ class TestMiscellaneous(TestEmailBase):
     def test_parsedate_returns_None_for_invalid_strings(self):
         self.assertIsNone(utils.parsedate(''))
         self.assertIsNone(utils.parsedate_tz(''))
-        self.assertIsNone(utils.parsedate(' '))
-        self.assertIsNone(utils.parsedate_tz(' '))
         self.assertIsNone(utils.parsedate('0'))
         self.assertIsNone(utils.parsedate_tz('0'))
         self.assertIsNone(utils.parsedate('A Complete Waste of Time'))
@@ -3265,11 +3227,6 @@ Foo
         addrs = utils.getaddresses(['User ((nested comment)) <foo@bar.com>'])
         eq(addrs[0][1], 'foo@bar.com')
 
-    def test_getaddresses_header_obj(self):
-        """Test the handling of a Header object."""
-        addrs = utils.getaddresses([Header('Al Person <aperson@dom.ain>')])
-        self.assertEqual(addrs[0][1], 'aperson@dom.ain')
-
     def test_make_msgid_collisions(self):
         # Test make_msgid uniqueness, even with multiple threads
         class MsgidsThread(Thread):
@@ -3284,7 +3241,7 @@ Foo
                     append(make_msgid(domain='testdomain-string'))
 
         threads = [MsgidsThread() for i in range(5)]
-        with threading_helper.start_threads(threads):
+        with start_threads(threads):
             pass
         all_ids = sum([t.msgids for t in threads], [])
         self.assertEqual(len(set(all_ids)), len(all_ids))
@@ -3385,15 +3342,13 @@ multipart/report
             '.test-idstring@testdomain-string>')
 
     def test_make_msgid_default_domain(self):
-        with patch('socket.getfqdn') as mock_getfqdn:
-            mock_getfqdn.return_value = domain = 'pythontest.example.com'
-            self.assertTrue(
-                email.utils.make_msgid().endswith(
-                    '@' + domain + '>'))
+        self.assertTrue(
+            email.utils.make_msgid().endswith(
+                '@' + getfqdn() + '>'))
 
     def test_Generator_linend(self):
         # Issue 14645.
-        with openfile('msg_26.txt', encoding="utf-8", newline='\n') as f:
+        with openfile('msg_26.txt', newline='\n') as f:
             msgtxt = f.read()
         msgtxt_nl = msgtxt.replace('\r\n', '\n')
         msg = email.message_from_string(msgtxt)
@@ -3404,7 +3359,7 @@ multipart/report
 
     def test_BytesGenerator_linend(self):
         # Issue 14645.
-        with openfile('msg_26.txt', encoding="utf-8", newline='\n') as f:
+        with openfile('msg_26.txt', newline='\n') as f:
             msgtxt = f.read()
         msgtxt_nl = msgtxt.replace('\r\n', '\n')
         msg = email.message_from_string(msgtxt_nl)
@@ -3463,7 +3418,7 @@ class TestIterators(TestEmailBase):
         it = iterators.body_line_iterator(msg)
         lines = list(it)
         eq(len(lines), 43)
-        with openfile('msg_19.txt', encoding="utf-8") as fp:
+        with openfile('msg_19.txt') as fp:
             neq(EMPTYSTRING.join(lines), fp.read())
 
     def test_typed_subpart_iterator(self):
@@ -3604,7 +3559,7 @@ class TestParsers(TestEmailBase):
     def test_header_parser(self):
         eq = self.assertEqual
         # Parse only the headers of a complex multipart MIME document
-        with openfile('msg_02.txt', encoding="utf-8") as fp:
+        with openfile('msg_02.txt') as fp:
             msg = HeaderParser().parse(fp)
         eq(msg['from'], 'ppp-request@zzz.org')
         eq(msg['to'], 'ppp@zzz.org')
@@ -3638,12 +3593,12 @@ class TestParsers(TestEmailBase):
             self.assertFalse(fp.closed)
 
     def test_parser_does_not_close_file(self):
-        with openfile('msg_02.txt', encoding="utf-8") as fp:
+        with openfile('msg_02.txt', 'r') as fp:
             email.parser.Parser().parse(fp)
             self.assertFalse(fp.closed)
 
     def test_parser_on_exception_does_not_close_file(self):
-        with openfile('msg_15.txt', encoding="utf-8") as fp:
+        with openfile('msg_15.txt', 'r') as fp:
             parser = email.parser.Parser
             self.assertRaises(email.errors.StartBoundaryNotFoundDefect,
                               parser(policy=email.policy.strict).parse, fp)
@@ -3687,7 +3642,7 @@ Here's the message body
 
     def test_crlf_separation(self):
         eq = self.assertEqual
-        with openfile('msg_26.txt', encoding="utf-8", newline='\n') as fp:
+        with openfile('msg_26.txt', newline='\n') as fp:
             msg = Parser().parse(fp)
         eq(len(msg.get_payload()), 2)
         part1 = msg.get_payload(0)
@@ -3698,7 +3653,7 @@ Here's the message body
 
     def test_crlf_flatten(self):
         # Using newline='\n' preserves the crlfs in this input file.
-        with openfile('msg_26.txt', encoding="utf-8", newline='\n') as fp:
+        with openfile('msg_26.txt', newline='\n') as fp:
             text = fp.read()
         msg = email.message_from_string(text)
         s = StringIO()
@@ -3711,7 +3666,7 @@ Here's the message body
     def test_multipart_digest_with_extra_mime_headers(self):
         eq = self.assertEqual
         neq = self.ndiffAssertEqual
-        with openfile('msg_28.txt', encoding="utf-8") as fp:
+        with openfile('msg_28.txt') as fp:
             msg = email.message_from_file(fp)
         # Structure is:
         # multipart/digest
@@ -4268,7 +4223,7 @@ class TestBase64(unittest.TestCase):
 
     def test_encode(self):
         eq = self.assertEqual
-        eq(base64mime.body_encode(b''), '')
+        eq(base64mime.body_encode(b''), b'')
         eq(base64mime.body_encode(b'hello'), 'aGVsbG8=\n')
         # Test the binary flag
         eq(base64mime.body_encode(b'hello\n'), 'aGVsbG8K\n')
@@ -4297,6 +4252,7 @@ eHh4eCB4eHh4IA==\r
         # Test the charset option
         eq(he('hello', charset='iso-8859-2'), '=?iso-8859-2?b?aGVsbG8=?=')
         eq(he('hello\nworld'), '=?iso-8859-1?b?aGVsbG8Kd29ybGQ=?=')
+
 
 
 class TestQuopri(unittest.TestCase):
@@ -5454,7 +5410,7 @@ Content-Transfer-Encoding: 8bit
 class TestSigned(TestEmailBase):
 
     def _msg_and_obj(self, filename):
-        with openfile(filename, encoding="utf-8") as fp:
+        with openfile(filename) as fp:
             original = fp.read()
             msg = email.message_from_string(original)
         return original, msg

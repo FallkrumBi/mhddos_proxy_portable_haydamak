@@ -2,16 +2,14 @@
    Test cases for codeop.py
    Nick Mathewson
 """
-import sys
 import unittest
-import warnings
-from test import support
-from test.support import warnings_helper
+from test.support import is_jython
 
 from codeop import compile_command, PyCF_DONT_IMPLY_DEDENT
 import io
 
-if support.is_jython:
+if is_jython:
+    import sys
 
     def unify_callables(d):
         for n,v in d.items():
@@ -23,7 +21,7 @@ class CodeopTests(unittest.TestCase):
 
     def assertValid(self, str, symbol='single'):
         '''succeed iff str is a valid piece of code'''
-        if support.is_jython:
+        if is_jython:
             code = compile_command(str, "<input>", symbol)
             self.assertTrue(code)
             if symbol == "single":
@@ -62,7 +60,7 @@ class CodeopTests(unittest.TestCase):
         av = self.assertValid
 
         # special case
-        if not support.is_jython:
+        if not is_jython:
             self.assertEqual(compile_command(""),
                              compile("pass", "<input>", 'single',
                                      PyCF_DONT_IMPLY_DEDENT))
@@ -135,10 +133,6 @@ class CodeopTests(unittest.TestCase):
         ai("a = {")
         ai("b + {")
 
-        ai("print([1,\n2,")
-        ai("print({1:1,\n2:3,")
-        ai("print((1,\n2,")
-
         ai("if 9==3:\n   pass\nelse:")
         ai("if 9==3:\n   pass\nelse:\n")
         ai("if 9==3:\n   pass\nelse:\n   pass")
@@ -164,6 +158,7 @@ class CodeopTests(unittest.TestCase):
         ai("","eval")
         ai("\n","eval")
         ai("(","eval")
+        ai("(\n\n\n","eval")
         ai("(9+","eval")
         ai("9+ \\","eval")
         ai("lambda z: \\","eval")
@@ -182,21 +177,21 @@ class CodeopTests(unittest.TestCase):
         ai("from a import (b,c")
         ai("from a import (b,c,")
 
-        ai("[")
-        ai("[a")
-        ai("[a,")
-        ai("[a,b")
-        ai("[a,b,")
+        ai("[");
+        ai("[a");
+        ai("[a,");
+        ai("[a,b");
+        ai("[a,b,");
 
-        ai("{")
-        ai("{a")
-        ai("{a:")
-        ai("{a:b")
-        ai("{a:b,")
-        ai("{a:b,c")
-        ai("{a:b,c:")
-        ai("{a:b,c:d")
-        ai("{a:b,c:d,")
+        ai("{");
+        ai("{a");
+        ai("{a:");
+        ai("{a:b");
+        ai("{a:b,");
+        ai("{a:b,c");
+        ai("{a:b,c:");
+        ai("{a:b,c:d");
+        ai("{a:b,c:d,");
 
         ai("a(")
         ai("a(b")
@@ -275,6 +270,7 @@ class CodeopTests(unittest.TestCase):
         ai("a = 'a\\\n")
 
         ai("a = 1","eval")
+        ai("a = (","eval")
         ai("]","eval")
         ai("())","eval")
         ai("[}","eval")
@@ -292,34 +288,11 @@ class CodeopTests(unittest.TestCase):
 
         ai("[i for i in range(10)] = (1, 2, 3)")
 
-    def test_invalid_exec(self):
-        ai = self.assertInvalid
-        ai("raise = 4", symbol="exec")
-        ai('def a-b', symbol='exec')
-        ai('await?', symbol='exec')
-        ai('=!=', symbol='exec')
-        ai('a await raise b', symbol='exec')
-        ai('a await raise b?+1', symbol='exec')
-
     def test_filename(self):
         self.assertEqual(compile_command("a = 1\n", "abc").co_filename,
                          compile("a = 1\n", "abc", 'single').co_filename)
         self.assertNotEqual(compile_command("a = 1\n", "abc").co_filename,
                             compile("a = 1\n", "def", 'single').co_filename)
-
-    def test_warning(self):
-        # Test that the warning is only returned once.
-        with warnings_helper.check_warnings(
-                (".*literal", SyntaxWarning),
-                (".*invalid", DeprecationWarning),
-                ) as w:
-            compile_command(r"'\e' is 0")
-            self.assertEqual(len(w.warnings), 2)
-
-        # bpo-41520: check SyntaxWarning treated as an SyntaxError
-        with warnings.catch_warnings(), self.assertRaises(SyntaxError):
-            warnings.simplefilter('error', SyntaxWarning)
-            compile_command('1 is 1', symbol='exec')
 
 
 if __name__ == "__main__":

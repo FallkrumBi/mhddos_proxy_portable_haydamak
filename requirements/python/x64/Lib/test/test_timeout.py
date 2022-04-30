@@ -3,7 +3,6 @@
 import functools
 import unittest
 from test import support
-from test.support import socket_helper
 
 # This requires the 'network' resource as given on the regrtest command line.
 skip_expected = not support.is_resource_enabled('network')
@@ -20,7 +19,7 @@ def resolve_address(host, port):
     We must perform name resolution before timeout tests, otherwise it will be
     performed by connect().
     """
-    with socket_helper.transient_internet(host):
+    with support.transient_internet(host):
         return socket.getaddrinfo(host, port, socket.AF_INET,
                                   socket.SOCK_STREAM)[0][4]
 
@@ -80,24 +79,24 @@ class CreationTestCase(unittest.TestCase):
     def testTimeoutThenBlocking(self):
         # Test settimeout() followed by setblocking()
         self.sock.settimeout(10)
-        self.sock.setblocking(True)
+        self.sock.setblocking(1)
         self.assertEqual(self.sock.gettimeout(), None)
-        self.sock.setblocking(False)
+        self.sock.setblocking(0)
         self.assertEqual(self.sock.gettimeout(), 0.0)
 
         self.sock.settimeout(10)
-        self.sock.setblocking(False)
+        self.sock.setblocking(0)
         self.assertEqual(self.sock.gettimeout(), 0.0)
-        self.sock.setblocking(True)
+        self.sock.setblocking(1)
         self.assertEqual(self.sock.gettimeout(), None)
 
     def testBlockingThenTimeout(self):
         # Test setblocking() followed by settimeout()
-        self.sock.setblocking(False)
+        self.sock.setblocking(0)
         self.sock.settimeout(1)
         self.assertEqual(self.sock.gettimeout(), 1)
 
-        self.sock.setblocking(True)
+        self.sock.setblocking(1)
         self.sock.settimeout(1)
         self.assertEqual(self.sock.gettimeout(), 1)
 
@@ -111,7 +110,7 @@ class TimeoutTestCase(unittest.TestCase):
     # solution.
     fuzz = 2.0
 
-    localhost = socket_helper.HOST
+    localhost = support.HOST
 
     def setUp(self):
         raise NotImplementedError()
@@ -122,7 +121,7 @@ class TimeoutTestCase(unittest.TestCase):
         """
         Test the specified socket method.
 
-        The method is run at most `count` times and must raise a TimeoutError
+        The method is run at most `count` times and must raise a socket.timeout
         within `timeout` + self.fuzz seconds.
         """
         self.sock.settimeout(timeout)
@@ -131,11 +130,11 @@ class TimeoutTestCase(unittest.TestCase):
             t1 = time.monotonic()
             try:
                 method(*args)
-            except TimeoutError as e:
+            except socket.timeout as e:
                 delta = time.monotonic() - t1
                 break
         else:
-            self.fail('TimeoutError was not raised')
+            self.fail('socket.timeout was not raised')
         # These checks should account for timing unprecision
         self.assertLess(delta, timeout + self.fuzz)
         self.assertGreater(delta, timeout - 1.0)
@@ -200,11 +199,14 @@ class TCPTimeoutTestCase(TimeoutTestCase):
 
         skip = True
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        timeout = support.LOOPBACK_TIMEOUT
+        # Use a timeout of 3 seconds.  Why 3?  Because it's more than 1, and
+        # less than 5.  i.e. no particular reason.  Feel free to tweak it if
+        # you feel a different value would be more appropriate.
+        timeout = 3
         sock.settimeout(timeout)
         try:
             sock.connect((whitehole))
-        except TimeoutError:
+        except socket.timeout:
             pass
         except OSError as err:
             if err.errno == errno.ECONNREFUSED:
@@ -230,25 +232,25 @@ class TCPTimeoutTestCase(TimeoutTestCase):
 
         # All that hard work just to test if connect times out in 0.001s ;-)
         self.addr_remote = blackhole
-        with socket_helper.transient_internet(self.addr_remote[0]):
+        with support.transient_internet(self.addr_remote[0]):
             self._sock_operation(1, 0.001, 'connect', self.addr_remote)
 
     def testRecvTimeout(self):
         # Test recv() timeout
-        with socket_helper.transient_internet(self.addr_remote[0]):
+        with support.transient_internet(self.addr_remote[0]):
             self.sock.connect(self.addr_remote)
             self._sock_operation(1, 1.5, 'recv', 1024)
 
     def testAcceptTimeout(self):
         # Test accept() timeout
-        socket_helper.bind_port(self.sock, self.localhost)
+        support.bind_port(self.sock, self.localhost)
         self.sock.listen()
         self._sock_operation(1, 1.5, 'accept')
 
     def testSend(self):
         # Test send() timeout
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serv:
-            socket_helper.bind_port(serv, self.localhost)
+            support.bind_port(serv, self.localhost)
             serv.listen()
             self.sock.connect(serv.getsockname())
             # Send a lot of data in order to bypass buffering in the TCP stack.
@@ -257,7 +259,7 @@ class TCPTimeoutTestCase(TimeoutTestCase):
     def testSendto(self):
         # Test sendto() timeout
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serv:
-            socket_helper.bind_port(serv, self.localhost)
+            support.bind_port(serv, self.localhost)
             serv.listen()
             self.sock.connect(serv.getsockname())
             # The address argument is ignored since we already connected.
@@ -267,7 +269,7 @@ class TCPTimeoutTestCase(TimeoutTestCase):
     def testSendall(self):
         # Test sendall() timeout
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serv:
-            socket_helper.bind_port(serv, self.localhost)
+            support.bind_port(serv, self.localhost)
             serv.listen()
             self.sock.connect(serv.getsockname())
             # Send a lot of data in order to bypass buffering in the TCP stack.
@@ -286,7 +288,7 @@ class UDPTimeoutTestCase(TimeoutTestCase):
     def testRecvfromTimeout(self):
         # Test recvfrom() timeout
         # Prevent "Address already in use" socket exceptions
-        socket_helper.bind_port(self.sock, self.localhost)
+        support.bind_port(self.sock, self.localhost)
         self._sock_operation(1, 1.5, 'recvfrom', 1024)
 
 

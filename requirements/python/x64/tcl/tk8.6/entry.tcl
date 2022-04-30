@@ -272,25 +272,6 @@ bind Entry <Meta-Delete> {
     }
 }
 
-# Bindings for IME text input and accents.
-
-bind Entry <<TkStartIMEMarkedText>> {
-    dict set ::tk::Priv(IMETextMark) "%W" [%W index insert]
-}
-bind Entry <<TkEndIMEMarkedText>> {
-    if { [catch {dict get $::tk::Priv(IMETextMark) "%W"} mark] } {
-	bell
-    } else {
-	%W selection range $mark insert
-    }
-}
-bind Entry <<TkClearIMEMarkedText>> {
-    %W delete [dict get $::tk::Priv(IMETextMark) "%W"] [%W index insert]
-}
-bind Entry <<TkAccentBackspace>> {
-    tk::EntryBackspace %W
-}
-
 # A few additional bindings of my own.
 
 bind Entry <2> {
@@ -671,12 +652,3 @@ proc ::tk::EntryGetSelection {w} {
     }
     return $entryString
 }
-
-
-
-
-
-
-
-
-

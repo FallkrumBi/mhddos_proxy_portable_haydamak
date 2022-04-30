@@ -1,6 +1,5 @@
 from test.support import (gc_collect, bigmemtest, _2G,
-                          cpython_only, captured_stdout,
-                          check_disallow_instantiation)
+                          cpython_only, captured_stdout)
 import locale
 import re
 import sre_compile
@@ -694,42 +693,6 @@ class ReTests(unittest.TestCase):
         for c in 'ceghijklmopqyzABCEFGHIJKLMNOPQRTVXYZ':
             with self.subTest(c):
                 self.assertRaises(re.error, re.compile, '[\\%c]' % c)
-
-    def test_named_unicode_escapes(self):
-        # test individual Unicode named escapes
-        self.assertTrue(re.match(r'\N{LESS-THAN SIGN}', '<'))
-        self.assertTrue(re.match(r'\N{less-than sign}', '<'))
-        self.assertIsNone(re.match(r'\N{LESS-THAN SIGN}', '>'))
-        self.assertTrue(re.match(r'\N{SNAKE}', '\U0001f40d'))
-        self.assertTrue(re.match(r'\N{ARABIC LIGATURE UIGHUR KIRGHIZ YEH WITH '
-                                 r'HAMZA ABOVE WITH ALEF MAKSURA ISOLATED FORM}',
-                                 '\ufbf9'))
-        self.assertTrue(re.match(r'[\N{LESS-THAN SIGN}-\N{GREATER-THAN SIGN}]',
-                                 '='))
-        self.assertIsNone(re.match(r'[\N{LESS-THAN SIGN}-\N{GREATER-THAN SIGN}]',
-                                   ';'))
-
-        # test errors in \N{name} handling - only valid names should pass
-        self.checkPatternError(r'\N', 'missing {', 2)
-        self.checkPatternError(r'[\N]', 'missing {', 3)
-        self.checkPatternError(r'\N{', 'missing character name', 3)
-        self.checkPatternError(r'[\N{', 'missing character name', 4)
-        self.checkPatternError(r'\N{}', 'missing character name', 3)
-        self.checkPatternError(r'[\N{}]', 'missing character name', 4)
-        self.checkPatternError(r'\NSNAKE}', 'missing {', 2)
-        self.checkPatternError(r'[\NSNAKE}]', 'missing {', 3)
-        self.checkPatternError(r'\N{SNAKE',
-                               'missing }, unterminated name', 3)
-        self.checkPatternError(r'[\N{SNAKE]',
-                               'missing }, unterminated name', 4)
-        self.checkPatternError(r'[\N{SNAKE]}',
-                               "undefined character name 'SNAKE]'", 1)
-        self.checkPatternError(r'\N{SPAM}',
-                               "undefined character name 'SPAM'", 0)
-        self.checkPatternError(r'[\N{SPAM}]',
-                               "undefined character name 'SPAM'", 1)
-        self.checkPatternError(br'\N{LESS-THAN SIGN}', r'bad escape \N', 0)
-        self.checkPatternError(br'[\N{LESS-THAN SIGN}]', r'bad escape \N', 1)
 
     def test_string_boundaries(self):
         # See http://bugs.python.org/issue10713
@@ -1553,7 +1516,18 @@ class ReTests(unittest.TestCase):
         self.assertRaises(re.error, re.compile, r'(?au)\w')
 
     def test_locale_flag(self):
-        enc = locale.getpreferredencoding()
+        # On Windows, Python 3.7 doesn't call setlocale(LC_CTYPE, "") at
+        # startup and so the LC_CTYPE locale uses Latin1 encoding by default,
+        # whereas getpreferredencoding() returns the ANSI code page. Set
+        # temporarily the LC_CTYPE locale to the user preferred encoding to
+        # ensure that it uses the ANSI code page.
+        oldloc = locale.setlocale(locale.LC_CTYPE, None)
+        locale.setlocale(locale.LC_CTYPE, "")
+        self.addCleanup(locale.setlocale, locale.LC_CTYPE, oldloc)
+
+        # Get the current locale encoding
+        enc = locale.getpreferredencoding(False)
+
         # Search non-ASCII letter
         for i in range(128, 256):
             try:
@@ -2171,35 +2145,11 @@ class PatternReprTests(unittest.TestCase):
         self.assertEqual(r[:30], "re.compile('Very long long lon")
         self.assertEqual(r[-16:], ", re.IGNORECASE)")
 
-    def test_flags_repr(self):
-        self.assertEqual(repr(re.I), "re.IGNORECASE")
-        self.assertEqual(repr(re.I|re.S|re.X),
-                         "re.IGNORECASE|re.DOTALL|re.VERBOSE")
-        self.assertEqual(repr(re.I|re.S|re.X|(1<<20)),
-                         "re.IGNORECASE|re.DOTALL|re.VERBOSE|0x100000")
-        self.assertEqual(repr(~re.I), "~re.IGNORECASE")
-        self.assertEqual(repr(~(re.I|re.S|re.X)),
-                         "~(re.IGNORECASE|re.DOTALL|re.VERBOSE)")
-        self.assertEqual(repr(~(re.I|re.S|re.X|(1<<20))),
-                         "~(re.IGNORECASE|re.DOTALL|re.VERBOSE|0x100000)")
-
 
 class ImplementationTest(unittest.TestCase):
     """
     Test implementation details of the re module.
     """
-
-    @cpython_only
-    def test_immutable(self):
-        # bpo-43908: check that re types are immutable
-        with self.assertRaises(TypeError):
-            re.Match.foo = 1
-        with self.assertRaises(TypeError):
-            re.Pattern.foo = 1
-        with self.assertRaises(TypeError):
-            pat = re.compile("")
-            tp = type(pat.scanner(""))
-            tp.foo = 1
 
     def test_overlap_table(self):
         f = sre_compile._generate_overlap_table
@@ -2209,18 +2159,6 @@ class ImplementationTest(unittest.TestCase):
         self.assertEqual(f("aaaa"), [0, 1, 2, 3])
         self.assertEqual(f("ababba"), [0, 0, 1, 2, 0, 1])
         self.assertEqual(f("abcabdac"), [0, 0, 0, 1, 2, 0, 1, 0])
-
-    def test_signedness(self):
-        self.assertGreaterEqual(sre_compile.MAXREPEAT, 0)
-        self.assertGreaterEqual(sre_compile.MAXGROUPS, 0)
-
-    @cpython_only
-    def test_disallow_instantiation(self):
-        # Ensure that the type disallows instantiation (bpo-43916)
-        check_disallow_instantiation(self, re.Match)
-        check_disallow_instantiation(self, re.Pattern)
-        pat = re.compile("")
-        check_disallow_instantiation(self, type(pat.scanner("")))
 
 
 class ExternalTests(unittest.TestCase):
@@ -2242,7 +2180,7 @@ class ExternalTests(unittest.TestCase):
 
     def test_re_tests(self):
         're_tests test suite'
-        from test.re_tests import tests, FAIL, SYNTAX_ERROR
+        from test.re_tests import tests, SUCCEED, FAIL, SYNTAX_ERROR
         for t in tests:
             pattern = s = outcome = repl = expected = None
             if len(t) == 5:

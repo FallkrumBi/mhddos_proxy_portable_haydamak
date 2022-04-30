@@ -10,8 +10,6 @@ something  = sentinel.Something
 something_else  = sentinel.SomethingElse
 
 
-class SampleException(Exception): pass
-
 
 class WithTest(unittest.TestCase):
 
@@ -22,10 +20,14 @@ class WithTest(unittest.TestCase):
 
 
     def test_with_statement_exception(self):
-        with self.assertRaises(SampleException):
+        try:
             with patch('%s.something' % __name__, sentinel.Something2):
                 self.assertEqual(something, sentinel.Something2, "unpatched")
-                raise SampleException()
+                raise Exception('pow')
+        except Exception:
+            pass
+        else:
+            self.fail("patch swallowed exception")
         self.assertEqual(something, sentinel.Something)
 
 
@@ -126,7 +128,8 @@ class WithTest(unittest.TestCase):
 
     def test_double_patch_instance_method(self):
         class C:
-            def f(self): pass
+            def f(self):
+                pass
 
         c = C()
 

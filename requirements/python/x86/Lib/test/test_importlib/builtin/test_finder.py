@@ -5,7 +5,6 @@ machinery = util.import_importlib('importlib.machinery')
 
 import sys
 import unittest
-import warnings
 
 
 @unittest.skipIf(util.BUILTINS.good_name is None, 'no reasonable builtin module')
@@ -59,9 +58,7 @@ class FinderTests(abc.FinderTests):
     def test_module(self):
         # Common case.
         with util.uncache(util.BUILTINS.good_name):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                found = self.machinery.BuiltinImporter.find_module(util.BUILTINS.good_name)
+            found = self.machinery.BuiltinImporter.find_module(util.BUILTINS.good_name)
             self.assertTrue(found)
             self.assertTrue(hasattr(found, 'load_module'))
 
@@ -73,19 +70,14 @@ class FinderTests(abc.FinderTests):
 
     def test_failure(self):
         assert 'importlib' not in sys.builtin_module_names
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            loader = self.machinery.BuiltinImporter.find_module('importlib')
+        loader = self.machinery.BuiltinImporter.find_module('importlib')
         self.assertIsNone(loader)
 
     def test_ignore_path(self):
         # The value for 'path' should always trigger a failed import.
         with util.uncache(util.BUILTINS.good_name):
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", DeprecationWarning)
-                loader = self.machinery.BuiltinImporter.find_module(
-                                                        util.BUILTINS.good_name,
-                                                        ['pkg'])
+            loader = self.machinery.BuiltinImporter.find_module(util.BUILTINS.good_name,
+                                                            ['pkg'])
             self.assertIsNone(loader)
 
 

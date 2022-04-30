@@ -1,11 +1,9 @@
-from decimal import Decimal
-from test.support import verbose, is_android
-from test.support.warnings_helper import check_warnings
+from test.support import verbose, is_android, check_warnings
 import unittest
 import locale
 import sys
 import codecs
-
+import warnings
 
 class BaseLocalizedTest(unittest.TestCase):
     #
@@ -336,7 +334,8 @@ class TestFrFRNumberFormatting(FrFRCookedTest, BaseFormattingTest):
         euro = '\u20ac'
         self._test_currency(50000, "50000,00 " + euro)
         self._test_currency(50000, "50 000,00 " + euro, grouping=True)
-        self._test_currency(50000, "50 000,00 EUR",
+        # XXX is the trailing space a bug?
+        self._test_currency(50000, "50 000,00 EUR ",
             grouping=True, international=True)
 
 
@@ -565,13 +564,7 @@ class TestMiscellaneous(unittest.TestCase):
         loc = locale.getlocale(locale.LC_CTYPE)
         if verbose:
             print('testing with %a' % (loc,), end=' ', flush=True)
-        try:
-            locale.setlocale(locale.LC_CTYPE, loc)
-        except locale.Error as exc:
-            # bpo-37945: setlocale(LC_CTYPE) fails with getlocale(LC_CTYPE)
-            # and the tr_TR locale on Windows. getlocale() builds a locale
-            # which is not recognize by setlocale().
-            self.skipTest(f"setlocale(LC_CTYPE, {loc!r}) failed: {exc!r}")
+        locale.setlocale(locale.LC_CTYPE, loc)
         self.assertEqual(loc, locale.getlocale(locale.LC_CTYPE))
 
     def test_invalid_locale_format_in_localetuple(self):
@@ -635,33 +628,6 @@ class TestfrFRDelocalizeTest(FrFRCookedTest, BaseDelocalizeTest):
     def test_atoi(self):
         self._test_atoi('50000', 50000)
         self._test_atoi('50 000', 50000)
-
-
-class BaseLocalizeTest(BaseLocalizedTest):
-
-    def _test_localize(self, value, out, grouping=False):
-        self.assertEqual(locale.localize(value, grouping=grouping), out)
-
-
-class TestEnUSLocalize(EnUSCookedTest, BaseLocalizeTest):
-
-    def test_localize(self):
-        self._test_localize('50000.00', '50000.00')
-        self._test_localize(
-            '{0:.16f}'.format(Decimal('1.15')), '1.1500000000000000')
-
-
-class TestCLocalize(CCookedTest, BaseLocalizeTest):
-
-    def test_localize(self):
-        self._test_localize('50000.00', '50000.00')
-
-
-class TestfrFRLocalize(FrFRCookedTest, BaseLocalizeTest):
-
-    def test_localize(self):
-        self._test_localize('50000.00', '50000,00')
-        self._test_localize('50000.00', '50 000,00', grouping=True)
 
 
 if __name__ == '__main__':

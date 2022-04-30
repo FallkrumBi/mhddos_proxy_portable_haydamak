@@ -1,10 +1,9 @@
 from test import support
-from test.support import import_helper
 support.requires('audio')
 
 from test.support import findfile
 
-ossaudiodev = import_helper.import_module('ossaudiodev')
+ossaudiodev = support.import_module('ossaudiodev')
 
 import errno
 import sys

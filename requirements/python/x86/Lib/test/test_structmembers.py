@@ -1,9 +1,8 @@
 import unittest
-from test.support import import_helper
-from test.support import warnings_helper
+from test import support
 
 # Skip this test if the _testcapi module isn't available.
-import_helper.import_module('_testcapi')
+support.import_module('_testcapi')
 from _testcapi import _test_structmembersType, \
     CHAR_MAX, CHAR_MIN, UCHAR_MAX, \
     SHRT_MAX, SHRT_MIN, USHRT_MAX, \
@@ -117,27 +116,27 @@ class ReadWriteTests(unittest.TestCase):
 class TestWarnings(unittest.TestCase):
 
     def test_byte_max(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_BYTE = CHAR_MAX+1
 
     def test_byte_min(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_BYTE = CHAR_MIN-1
 
     def test_ubyte_max(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_UBYTE = UCHAR_MAX+1
 
     def test_short_max(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_SHORT = SHRT_MAX+1
 
     def test_short_min(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_SHORT = SHRT_MIN-1
 
     def test_ushort_max(self):
-        with warnings_helper.check_warnings(('', RuntimeWarning)):
+        with support.check_warnings(('', RuntimeWarning)):
             ts.T_USHORT = USHRT_MAX+1
 
 

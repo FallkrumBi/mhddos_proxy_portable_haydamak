@@ -1,6 +1,4 @@
-from test.support import findfile
-from test.support.os_helper import TESTFN, unlink
-from test.support.warnings_helper import check_no_resource_warning
+from test.support import check_no_resource_warning, findfile, TESTFN, unlink
 import unittest
 from unittest import mock
 from test import audiotests
@@ -9,6 +7,8 @@ import io
 import sys
 import struct
 import aifc
+import warnings
+
 
 class AifcTest(audiotests.AudioWriteTests,
                audiotests.AudioTestsWithSourceFile):
@@ -145,12 +145,13 @@ class AifcALAWTest(AifcTest, unittest.TestCase):
         frames = byteswap(frames, 2)
 
 
-class AifcMiscTest(unittest.TestCase):
+class AifcMiscTest(audiotests.AudioMiscTests, unittest.TestCase):
+    module = aifc
+
     def test_skipunknown(self):
         #Issue 2245
         #This file contains chunk types aifc doesn't recognize.
-        f = aifc.open(findfile('Sine-1000Hz-300ms.aif'))
-        f.close()
+        self.f = aifc.open(findfile('Sine-1000Hz-300ms.aif'))
 
     def test_close_opened_files_on_error(self):
         non_aifc_file = findfile('pluck-pcm8.wav', subdir='audiodata')
@@ -173,8 +174,7 @@ class AifcMiscTest(unittest.TestCase):
         f.setparams((1, 1, 1, 1, b'NONE', b''))
         f.close()
 
-        f = aifc.open(TESTFN, 'rb')
-        self.addCleanup(f.close)
+        f = self.f = aifc.open(TESTFN, 'rb')
         params = f.getparams()
         self.assertEqual(params.nchannels, f.getnchannels())
         self.assertEqual(params.sampwidth, f.getsampwidth())
@@ -210,8 +210,7 @@ class AifcMiscTest(unittest.TestCase):
         fout.setmark(2, 0, b'even')
         fout.writeframes(b'\x00')
         fout.close()
-        f = aifc.open(TESTFN, 'rb')
-        self.addCleanup(f.close)
+        f = self.f = aifc.open(TESTFN, 'rb')
         self.assertEqual(f.getmarkers(), [(1, 0, b'odd'), (2, 0, b'even')])
         self.assertEqual(f.getmark(1), (1, 0, b'odd'))
         self.assertEqual(f.getmark(2), (2, 0, b'even'))

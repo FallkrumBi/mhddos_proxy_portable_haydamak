@@ -1,6 +1,5 @@
 import unittest
 from test import support
-from test.support import warnings_helper
 import os
 import sys
 
@@ -16,9 +15,8 @@ class AllTest(unittest.TestCase):
 
     def check_all(self, modname):
         names = {}
-        with warnings_helper.check_warnings(
+        with support.check_warnings(
             (".* (module|package)", DeprecationWarning),
-            (".* (module|package)", PendingDeprecationWarning),
             ("", ResourceWarning),
             quiet=True):
             try:
@@ -32,27 +30,21 @@ class AllTest(unittest.TestCase):
             raise NoAll(modname)
         names = {}
         with self.subTest(module=modname):
-            with warnings_helper.check_warnings(
-                ("", DeprecationWarning),
-                ("", ResourceWarning),
-                quiet=True):
-                try:
-                    exec("from %s import *" % modname, names)
-                except Exception as e:
-                    # Include the module name in the exception string
-                    self.fail("__all__ failure in {}: {}: {}".format(
-                              modname, e.__class__.__name__, e))
-                if "__builtins__" in names:
-                    del names["__builtins__"]
-                if '__annotations__' in names:
-                    del names['__annotations__']
-                if "__warningregistry__" in names:
-                    del names["__warningregistry__"]
-                keys = set(names)
-                all_list = sys.modules[modname].__all__
-                all_set = set(all_list)
-                self.assertCountEqual(all_set, all_list, "in module {}".format(modname))
-                self.assertEqual(keys, all_set, "in module {}".format(modname))
+            try:
+                exec("from %s import *" % modname, names)
+            except Exception as e:
+                # Include the module name in the exception string
+                self.fail("__all__ failure in {}: {}: {}".format(
+                          modname, e.__class__.__name__, e))
+            if "__builtins__" in names:
+                del names["__builtins__"]
+            if '__annotations__' in names:
+                del names['__annotations__']
+            keys = set(names)
+            all_list = sys.modules[modname].__all__
+            all_set = set(all_list)
+            self.assertCountEqual(all_set, all_list, "in module {}".format(modname))
+            self.assertEqual(keys, all_set, "in module {}".format(modname))
 
     def walk_modules(self, basedir, modpath):
         for fn in sorted(os.listdir(basedir)):
@@ -69,8 +61,8 @@ class AllTest(unittest.TestCase):
             yield path, modpath + fn[:-3]
 
     def test_all(self):
-        # List of denied modules and packages
-        denylist = set([
+        # Blacklisted modules and packages
+        blacklist = set([
             # Will raise a SyntaxError when compiling the exec statement
             '__future__',
         ])
@@ -85,13 +77,13 @@ class AllTest(unittest.TestCase):
         lib_dir = os.path.dirname(os.path.dirname(__file__))
         for path, modname in self.walk_modules(lib_dir, ""):
             m = modname
-            denied = False
+            blacklisted = False
             while m:
-                if m in denylist:
-                    denied = True
+                if m in blacklist:
+                    blacklisted = True
                     break
                 m = m.rpartition('.')[0]
-            if denied:
+            if blacklisted:
                 continue
             if support.verbose:
                 print(modname)

@@ -1,6 +1,5 @@
 """Utilities shared by tests."""
 
-import asyncio
 import collections
 import contextlib
 import io
@@ -34,7 +33,6 @@ from asyncio import futures
 from asyncio import tasks
 from asyncio.log import logger
 from test import support
-from test.support import threading_helper
 
 
 def data_file(filename):
@@ -59,7 +57,7 @@ PEERCERT = {
     'issuer': ((('countryName', 'XY'),),
             (('organizationName', 'Python Software Foundation CA'),),
             (('commonName', 'our-ca-server'),)),
-    'notAfter': 'Oct 28 14:23:16 2037 GMT',
+    'notAfter': 'Jul  7 14:23:16 2028 GMT',
     'notBefore': 'Aug 29 14:23:16 2018 GMT',
     'serialNumber': 'CB2D80995A69525C',
     'subject': ((('countryName', 'XY'),),
@@ -91,7 +89,7 @@ def dummy_ssl_context():
     if ssl is None:
         return None
     else:
-        return simple_client_sslcontext(disable_verify=True)
+        return ssl.SSLContext(ssl.PROTOCOL_TLS)
 
 
 def run_briefly(loop):
@@ -108,14 +106,14 @@ def run_briefly(loop):
         gen.close()
 
 
-def run_until(loop, pred, timeout=support.SHORT_TIMEOUT):
+def run_until(loop, pred, timeout=30):
     deadline = time.monotonic() + timeout
     while not pred():
         if timeout is not None:
             timeout = deadline - time.monotonic()
             if timeout <= 0:
                 raise futures.TimeoutError()
-        loop.run_until_complete(tasks.sleep(0.001))
+        loop.run_until_complete(tasks.sleep(0.001, loop=loop))
 
 
 def run_once(loop):
@@ -140,7 +138,7 @@ class SilentWSGIRequestHandler(WSGIRequestHandler):
 
 class SilentWSGIServer(WSGIServer):
 
-    request_timeout = support.LOOPBACK_TIMEOUT
+    request_timeout = 2
 
     def get_request(self):
         request, client_addr = super().get_request()
@@ -158,7 +156,7 @@ class SSLWSGIServerMixin:
         # contains the ssl key and certificate files) differs
         # between the stdlib and stand-alone asyncio.
         # Prefer our own if we can find it.
-        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context = ssl.SSLContext()
         context.load_cert_chain(ONLYCERT, ONLYKEY)
 
         ssock = context.wrap_socket(request, server_side=True)
@@ -176,21 +174,11 @@ class SSLWSGIServer(SSLWSGIServerMixin, SilentWSGIServer):
 
 def _run_test_server(*, address, use_ssl=False, server_cls, server_ssl_cls):
 
-    def loop(environ):
-        size = int(environ['CONTENT_LENGTH'])
-        while size:
-            data = environ['wsgi.input'].read(min(size, 0x10000))
-            yield data
-            size -= len(data)
-
     def app(environ, start_response):
         status = '200 OK'
         headers = [('Content-type', 'text/plain')]
         start_response(status, headers)
-        if environ['PATH_INFO'] == '/loop':
-            return loop(environ)
-        else:
-            return [b'Test message']
+        return [b'Test message']
 
     # Run the test WSGI server in a separate thread in order not to
     # interfere with event handling in the main thread
@@ -221,7 +209,7 @@ if hasattr(socket, 'AF_UNIX'):
 
     class UnixWSGIServer(UnixHTTPServer, WSGIServer):
 
-        request_timeout = support.LOOPBACK_TIMEOUT
+        request_timeout = 2
 
         def server_bind(self):
             UnixHTTPServer.server_bind(self)
@@ -510,24 +498,10 @@ def get_function_source(func):
 class TestCase(unittest.TestCase):
     @staticmethod
     def close_loop(loop):
-        if loop._default_executor is not None:
-            if not loop.is_closed():
-                loop.run_until_complete(loop.shutdown_default_executor())
-            else:
-                loop._default_executor.shutdown(wait=True)
+        executor = loop._default_executor
+        if executor is not None:
+            executor.shutdown(wait=True)
         loop.close()
-        policy = support.maybe_get_event_loop_policy()
-        if policy is not None:
-            try:
-                watcher = policy.get_child_watcher()
-            except NotImplementedError:
-                # watcher is not implemented by EventLoopPolicy, e.g. Windows
-                pass
-            else:
-                if isinstance(watcher, asyncio.ThreadedChildWatcher):
-                    threads = list(watcher._threads.values())
-                    for thread in threads:
-                        thread.join()
 
     def set_event_loop(self, loop, *, cleanup=True):
         assert loop is not None
@@ -541,10 +515,17 @@ class TestCase(unittest.TestCase):
         self.set_event_loop(loop)
         return loop
 
+    def unpatch_get_running_loop(self):
+        events._get_running_loop = self._get_running_loop
+
     def setUp(self):
-        self._thread_cleanup = threading_helper.threading_setup()
+        self._get_running_loop = events._get_running_loop
+        events._get_running_loop = lambda: None
+        self._thread_cleanup = support.threading_setup()
 
     def tearDown(self):
+        self.unpatch_get_running_loop()
+
         events.set_event_loop(None)
 
         # Detect CPython bug #23353: ensure that yield/yield-from is not used
@@ -552,7 +533,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(sys.exc_info(), (None, None, None))
 
         self.doCleanups()
-        threading_helper.threading_cleanup(*self._thread_cleanup)
+        support.threading_cleanup(*self._thread_cleanup)
         support.reap_children()
 
 

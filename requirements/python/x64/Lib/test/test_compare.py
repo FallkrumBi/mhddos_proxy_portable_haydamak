@@ -1,5 +1,4 @@
 import unittest
-from test.support import ALWAYS_EQ
 
 class Empty:
     def __repr__(self):
@@ -14,6 +13,13 @@ class Cmp:
 
     def __eq__(self, other):
         return self.arg == other
+
+class Anything:
+    def __eq__(self, other):
+        return True
+
+    def __ne__(self, other):
+        return False
 
 class ComparisonTest(unittest.TestCase):
     set1 = [2, 2.0, 2, 2+0j, Cmp(2.0)]
@@ -107,11 +113,11 @@ class ComparisonTest(unittest.TestCase):
 
     def test_issue_1393(self):
         x = lambda: None
-        self.assertEqual(x, ALWAYS_EQ)
-        self.assertEqual(ALWAYS_EQ, x)
+        self.assertEqual(x, Anything())
+        self.assertEqual(Anything(), x)
         y = object()
-        self.assertEqual(y, ALWAYS_EQ)
-        self.assertEqual(ALWAYS_EQ, y)
+        self.assertEqual(y, Anything())
+        self.assertEqual(Anything(), y)
 
 
 if __name__ == '__main__':

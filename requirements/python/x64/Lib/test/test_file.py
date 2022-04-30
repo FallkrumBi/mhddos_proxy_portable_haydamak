@@ -7,9 +7,8 @@ from weakref import proxy
 import io
 import _pyio as pyio
 
-from test.support.os_helper import TESTFN
-from test.support import os_helper
-from test.support import warnings_helper
+from test.support import TESTFN
+from test import support
 from collections import UserList
 
 class AutoFileTests:
@@ -21,7 +20,7 @@ class AutoFileTests:
     def tearDown(self):
         if self.f:
             self.f.close()
-        os_helper.unlink(TESTFN)
+        support.unlink(TESTFN)
 
     def testWeakRefs(self):
         # verify weak references
@@ -52,7 +51,7 @@ class AutoFileTests:
         # verify readinto refuses text files
         a = array('b', b'x'*10)
         self.f.close()
-        self.f = self.open(TESTFN, encoding="utf-8")
+        self.f = self.open(TESTFN, 'r')
         if hasattr(self.f, "readinto"):
             self.assertRaises(TypeError, self.f.readinto, a)
 
@@ -140,7 +139,7 @@ class PyAutoFileTests(AutoFileTests, unittest.TestCase):
 class OtherFileTests:
 
     def tearDown(self):
-        os_helper.unlink(TESTFN)
+        support.unlink(TESTFN)
 
     def testModeStrings(self):
         # check invalid mode strings
@@ -153,22 +152,6 @@ class OtherFileTests:
             else:
                 f.close()
                 self.fail('%r is an invalid file mode' % mode)
-
-    def testStdin(self):
-        if sys.platform == 'osf1V5':
-            # This causes the interpreter to exit on OSF1 v5.1.
-            self.skipTest(
-                ' sys.stdin.seek(-1) may crash the interpreter on OSF1.'
-                ' Test manually.')
-
-        if not sys.stdin.isatty():
-            # Issue 14853: stdin becomes seekable when redirected to a file
-            self.skipTest('stdin must be a TTY in this test')
-
-        with self.assertRaises((IOError, ValueError)):
-            sys.stdin.seek(-1)
-        with self.assertRaises((IOError, ValueError)):
-            sys.stdin.truncate()
 
     def testBadModeArgument(self):
         # verify that we get a sensible error message for bad mode argument
@@ -186,33 +169,22 @@ class OtherFileTests:
             f.close()
             self.fail("no error for invalid mode: %s" % bad_mode)
 
-    def _checkBufferSize(self, s):
-        try:
-            f = self.open(TESTFN, 'wb', s)
-            f.write(str(s).encode("ascii"))
-            f.close()
-            f.close()
-            f = self.open(TESTFN, 'rb', s)
-            d = int(f.read().decode("ascii"))
-            f.close()
-            f.close()
-        except OSError as msg:
-            self.fail('error setting buffer size %d: %s' % (s, str(msg)))
-        self.assertEqual(d, s)
-
     def testSetBufferSize(self):
         # make sure that explicitly setting the buffer size doesn't cause
         # misbehaviour especially with repeated close() calls
-        for s in (-1, 0, 512):
-            with warnings_helper.check_no_warnings(self,
-                                           message='line buffering',
-                                           category=RuntimeWarning):
-                self._checkBufferSize(s)
-
-        # test that attempts to use line buffering in binary mode cause
-        # a warning
-        with self.assertWarnsRegex(RuntimeWarning, 'line buffering'):
-            self._checkBufferSize(1)
+        for s in (-1, 0, 1, 512):
+            try:
+                f = self.open(TESTFN, 'wb', s)
+                f.write(str(s).encode("ascii"))
+                f.close()
+                f.close()
+                f = self.open(TESTFN, 'rb', s)
+                d = int(f.read().decode("ascii"))
+                f.close()
+                f.close()
+            except OSError as msg:
+                self.fail('error setting buffer size %d: %s' % (s, str(msg)))
+            self.assertEqual(d, s)
 
     def testTruncateOnWindows(self):
         # SF bug <http://www.python.org/sf/801631>

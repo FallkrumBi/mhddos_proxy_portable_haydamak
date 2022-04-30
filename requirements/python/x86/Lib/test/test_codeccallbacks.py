@@ -1,9 +1,9 @@
 import codecs
 import html.entities
 import sys
+import test.support
 import unicodedata
 import unittest
-
 
 class PosReturn:
     # this can be used for configurable callbacks
@@ -210,6 +210,42 @@ class CodecCallbackTest(unittest.TestCase):
 
         charmap[ord("?")] = "XYZ" # wrong type in mapping
         self.assertRaises(TypeError, codecs.charmap_encode, sin, "replace", charmap)
+
+    def test_decodeunicodeinternal(self):
+        with test.support.check_warnings(('unicode_internal codec has been '
+                                          'deprecated', DeprecationWarning)):
+            self.assertRaises(
+                UnicodeDecodeError,
+                b"\x00\x00\x00\x00\x00".decode,
+                "unicode-internal",
+            )
+            if len('\0'.encode('unicode-internal')) == 4:
+                def handler_unicodeinternal(exc):
+                    if not isinstance(exc, UnicodeDecodeError):
+                        raise TypeError("don't know how to handle %r" % exc)
+                    return ("\x01", 1)
+
+                self.assertEqual(
+                    b"\x00\x00\x00\x00\x00".decode("unicode-internal", "ignore"),
+                    "\u0000"
+                )
+
+                self.assertEqual(
+                    b"\x00\x00\x00\x00\x00".decode("unicode-internal", "replace"),
+                    "\u0000\ufffd"
+                )
+
+                self.assertEqual(
+                    b"\x00\x00\x00\x00\x00".decode("unicode-internal", "backslashreplace"),
+                    "\u0000\\x00"
+                )
+
+                codecs.register_error("test.hui", handler_unicodeinternal)
+
+                self.assertEqual(
+                    b"\x00\x00\x00\x00\x00".decode("unicode-internal", "test.hui"),
+                    "\u0000\u0001\u0000"
+                )
 
     def test_callbacks(self):
         def handler1(exc):
@@ -758,13 +794,16 @@ class CodecCallbackTest(unittest.TestCase):
                 ("ascii", b"\xff"),
                 ("utf-8", b"\xff"),
                 ("utf-7", b"+x-"),
+                ("unicode-internal", b"\x00"),
             ):
-                self.assertRaises(
-                    TypeError,
-                    bytes.decode,
-                    enc,
-                    "test.badhandler"
-                )
+                with test.support.check_warnings():
+                    # unicode-internal has been deprecated
+                    self.assertRaises(
+                        TypeError,
+                        bytes.decode,
+                        enc,
+                        "test.badhandler"
+                    )
 
     def test_lookup(self):
         self.assertEqual(codecs.strict_errors, codecs.lookup_error("strict"))
@@ -974,6 +1013,7 @@ class CodecCallbackTest(unittest.TestCase):
             ("utf-32", b"\xff"),
             ("unicode-escape", b"\\u123g"),
             ("raw-unicode-escape", b"\\u123g"),
+            ("unicode-internal", b"\xff"),
         ]
 
         def replacing(exc):
@@ -984,9 +1024,11 @@ class CodecCallbackTest(unittest.TestCase):
                 raise TypeError("don't know how to handle %r" % exc)
         codecs.register_error("test.replacing", replacing)
 
-        for (encoding, data) in baddata:
-            with self.assertRaises(TypeError):
-                data.decode(encoding, "test.replacing")
+        with test.support.check_warnings():
+            # unicode-internal has been deprecated
+            for (encoding, data) in baddata:
+                with self.assertRaises(TypeError):
+                    data.decode(encoding, "test.replacing")
 
         def mutating(exc):
             if isinstance(exc, UnicodeDecodeError):
@@ -997,8 +1039,10 @@ class CodecCallbackTest(unittest.TestCase):
         codecs.register_error("test.mutating", mutating)
         # If the decoder doesn't pick up the modified input the following
         # will lead to an endless loop
-        for (encoding, data) in baddata:
-            self.assertEqual(data.decode(encoding, "test.mutating"), "\u4242")
+        with test.support.check_warnings():
+            # unicode-internal has been deprecated
+            for (encoding, data) in baddata:
+                self.assertEqual(data.decode(encoding, "test.mutating"), "\u4242")
 
     # issue32583
     def test_crashing_decode_handler(self):

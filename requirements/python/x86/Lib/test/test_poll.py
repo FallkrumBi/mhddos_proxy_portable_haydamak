@@ -7,10 +7,7 @@ import select
 import threading
 import time
 import unittest
-from test.support import run_unittest, cpython_only
-from test.support import threading_helper
-from test.support.os_helper import TESTFN
-
+from test.support import TESTFN, run_unittest, reap_threads, cpython_only
 
 try:
     select.poll
@@ -86,12 +83,13 @@ class PollTests(unittest.TestCase):
         r = p.poll()
         self.assertEqual(r[0], (FD, select.POLLNVAL))
 
-        with open(TESTFN, 'w') as f:
-            fd = f.fileno()
-            p = select.poll()
-            p.register(f)
-            r = p.poll()
-            self.assertEqual(r[0][0], fd)
+        f = open(TESTFN, 'w')
+        fd = f.fileno()
+        p = select.poll()
+        p.register(f)
+        r = p.poll()
+        self.assertEqual(r[0][0], fd)
+        f.close()
         r = p.poll()
         self.assertEqual(r[0], (fd, select.POLLNVAL))
         os.unlink(TESTFN)
@@ -161,9 +159,9 @@ class PollTests(unittest.TestCase):
             self.fail('Overflow must have occurred')
 
         # Issues #15989, #17919
-        self.assertRaises(ValueError, pollster.register, 0, -1)
+        self.assertRaises(OverflowError, pollster.register, 0, -1)
         self.assertRaises(OverflowError, pollster.register, 0, 1 << 64)
-        self.assertRaises(ValueError, pollster.modify, 1, -1)
+        self.assertRaises(OverflowError, pollster.modify, 1, -1)
         self.assertRaises(OverflowError, pollster.modify, 1, 1 << 64)
 
     @cpython_only
@@ -178,7 +176,7 @@ class PollTests(unittest.TestCase):
         self.assertRaises(OverflowError, pollster.poll, INT_MAX + 1)
         self.assertRaises(OverflowError, pollster.poll, UINT_MAX + 1)
 
-    @threading_helper.reap_threads
+    @reap_threads
     def test_threaded_poll(self):
         r, w = os.pipe()
         self.addCleanup(os.close, r)
@@ -207,7 +205,7 @@ class PollTests(unittest.TestCase):
             t.join()
 
     @unittest.skipUnless(threading, 'Threading required for this test.')
-    @threading_helper.reap_threads
+    @reap_threads
     def test_poll_blocks_with_negative_ms(self):
         for timeout_ms in [None, -1000, -1, -1.0, -0.1, -1e-100]:
             # Create two file descriptors. This will be used to unlock

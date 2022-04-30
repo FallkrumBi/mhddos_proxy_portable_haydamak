@@ -3,7 +3,6 @@ import importlib
 import os
 import sys
 import unittest
-import warnings
 
 from test.test_importlib import util
 
@@ -83,10 +82,7 @@ class SingleNamespacePackage(NamespacePackageTest):
 
     def test_module_repr(self):
         import foo.one
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            self.assertEqual(foo.__spec__.loader.module_repr(foo),
-                            "<module 'foo' (namespace)>")
+        self.assertEqual(repr(foo), "<module 'foo' (namespace)>")
 
 
 class DynamicPathNamespacePackage(NamespacePackageTest):
@@ -335,12 +331,6 @@ class LoaderTests(NamespacePackageTest):
         import foo
         self.assertIsNone(foo.__spec__.origin)
         self.assertIsNone(foo.__file__)
-
-    def test_path_indexable(self):
-        # bpo-35843
-        import foo
-        expected_path = os.path.join(self.root, 'portion1', 'foo')
-        self.assertEqual(foo.__path__[0], expected_path)
 
 
 if __name__ == "__main__":

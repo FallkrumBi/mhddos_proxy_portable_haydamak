@@ -96,11 +96,11 @@ def check(file):
         errprint("%r: I/O Error: %s" % (file, str(msg)))
         return
 
-    with f:
-        ff = FutureFinder(f, file)
-        changed = ff.run()
-        if changed:
-            ff.gettherest()
+    ff = FutureFinder(f, file)
+    changed = ff.run()
+    if changed:
+        ff.gettherest()
+    f.close()
     if changed:
         if verbose:
             print("changed.")
@@ -122,8 +122,9 @@ def check(file):
             os.rename(file, bak)
             if verbose:
                 print("renamed", file, "to", bak)
-            with open(file, "w") as g:
-                ff.write(g)
+            g = open(file, "w")
+            ff.write(g)
+            g.close()
             if verbose:
                 print("wrote new", file)
     else:

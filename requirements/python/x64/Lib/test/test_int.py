@@ -378,22 +378,13 @@ class IntTestCases(unittest.TestCase):
                 int(ExceptionalTrunc())
 
             for trunc_result_base in (object, Classic):
-                class Index(trunc_result_base):
-                    def __index__(self):
+                class Integral(trunc_result_base):
+                    def __int__(self):
                         return 42
 
                 class TruncReturnsNonInt(base):
                     def __trunc__(self):
-                        return Index()
-                self.assertEqual(int(TruncReturnsNonInt()), 42)
-
-                class Intable(trunc_result_base):
-                    def __int__(self):
-                        return 42
-
-                class TruncReturnsNonIndex(base):
-                    def __trunc__(self):
-                        return Intable()
+                        return Integral()
                 self.assertEqual(int(TruncReturnsNonInt()), 42)
 
                 class NonIntegral(trunc_result_base):
@@ -426,21 +417,6 @@ class IntTestCases(unittest.TestCase):
                 with self.assertRaises(TypeError):
                     int(TruncReturnsBadInt())
 
-    def test_int_subclass_with_index(self):
-        class MyIndex(int):
-            def __index__(self):
-                return 42
-
-        class BadIndex(int):
-            def __index__(self):
-                return 42.0
-
-        my_int = MyIndex(7)
-        self.assertEqual(my_int, 7)
-        self.assertEqual(int(my_int), 7)
-
-        self.assertEqual(int(BadIndex()), 0)
-
     def test_int_subclass_with_int(self):
         class MyInt(int):
             def __int__(self):
@@ -454,19 +430,9 @@ class IntTestCases(unittest.TestCase):
         self.assertEqual(my_int, 7)
         self.assertEqual(int(my_int), 42)
 
-        my_int = BadInt(7)
-        self.assertEqual(my_int, 7)
-        self.assertRaises(TypeError, int, my_int)
+        self.assertRaises(TypeError, int, BadInt())
 
     def test_int_returns_int_subclass(self):
-        class BadIndex:
-            def __index__(self):
-                return True
-
-        class BadIndex2(int):
-            def __index__(self):
-                return True
-
         class BadInt:
             def __int__(self):
                 return True
@@ -475,10 +441,6 @@ class IntTestCases(unittest.TestCase):
             def __int__(self):
                 return True
 
-        class TruncReturnsBadIndex:
-            def __trunc__(self):
-                return BadIndex()
-
         class TruncReturnsBadInt:
             def __trunc__(self):
                 return BadInt()
@@ -486,17 +448,6 @@ class IntTestCases(unittest.TestCase):
         class TruncReturnsIntSubclass:
             def __trunc__(self):
                 return True
-
-        bad_int = BadIndex()
-        with self.assertWarns(DeprecationWarning):
-            n = int(bad_int)
-        self.assertEqual(n, 1)
-        self.assertIs(type(n), int)
-
-        bad_int = BadIndex2()
-        n = int(bad_int)
-        self.assertEqual(n, 0)
-        self.assertIs(type(n), int)
 
         bad_int = BadInt()
         with self.assertWarns(DeprecationWarning):
@@ -510,14 +461,11 @@ class IntTestCases(unittest.TestCase):
         self.assertEqual(n, 1)
         self.assertIs(type(n), int)
 
-        bad_int = TruncReturnsBadIndex()
+        bad_int = TruncReturnsBadInt()
         with self.assertWarns(DeprecationWarning):
             n = int(bad_int)
         self.assertEqual(n, 1)
         self.assertIs(type(n), int)
-
-        bad_int = TruncReturnsBadInt()
-        self.assertRaises(TypeError, int, bad_int)
 
         good_int = TruncReturnsIntSubclass()
         n = int(good_int)

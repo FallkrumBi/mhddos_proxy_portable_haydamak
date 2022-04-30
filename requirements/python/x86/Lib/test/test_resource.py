@@ -1,12 +1,11 @@
 import contextlib
 import sys
+import os
 import unittest
 from test import support
-from test.support import import_helper
-from test.support import os_helper
 import time
 
-resource = import_helper.import_module('resource')
+resource = support.import_module('resource')
 
 # This test is checking a few specific problem spots with the resource module.
 
@@ -18,8 +17,6 @@ class ResourceTest(unittest.TestCase):
         self.assertRaises(TypeError, resource.setrlimit)
         self.assertRaises(TypeError, resource.setrlimit, 42, 42, 42)
 
-    @unittest.skipIf(sys.platform == "vxworks",
-                     "setting RLIMIT_FSIZE is not supported on VxWorks")
     def test_fsize_ismax(self):
         try:
             (cur, max) = resource.getrlimit(resource.RLIMIT_FSIZE)
@@ -53,7 +50,7 @@ class ResourceTest(unittest.TestCase):
                     limit_set = True
                 except ValueError:
                     limit_set = False
-                f = open(os_helper.TESTFN, "wb")
+                f = open(support.TESTFN, "wb")
                 try:
                     f.write(b"X" * 1024)
                     try:
@@ -79,7 +76,7 @@ class ResourceTest(unittest.TestCase):
             finally:
                 if limit_set:
                     resource.setrlimit(resource.RLIMIT_FSIZE, (cur, max))
-                os_helper.unlink(os_helper.TESTFN)
+                support.unlink(support.TESTFN)
 
     def test_fsize_toobig(self):
         # Be sure that setrlimit is checking for really large values
@@ -114,8 +111,6 @@ class ResourceTest(unittest.TestCase):
             pass
 
     # Issue 6083: Reference counting bug
-    @unittest.skipIf(sys.platform == "vxworks",
-                     "setting RLIMIT_CPU is not supported on VxWorks")
     def test_setrusage_refcount(self):
         try:
             limits = resource.getrlimit(resource.RLIMIT_CPU)

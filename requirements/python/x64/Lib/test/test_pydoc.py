@@ -21,14 +21,15 @@ import urllib.parse
 import xml.etree
 import xml.etree.ElementTree
 import textwrap
+import threading
 from io import StringIO
 from collections import namedtuple
-from test.support import os_helper
 from test.support.script_helper import assert_python_ok
-from test.support import threading_helper
-from test.support import (reap_children, captured_output, captured_stdout,
-                          captured_stderr, requires_docstrings)
-from test.support.os_helper import (TESTFN, rmtree, unlink)
+from test.support import (
+    TESTFN, rmtree,
+    reap_children, reap_threads, captured_output, captured_stdout,
+    captured_stderr, unlink, requires_docstrings
+)
 from test import pydoc_mod
 
 
@@ -476,7 +477,6 @@ class PydocDocTest(unittest.TestCase):
     def test_non_str_name(self):
         # issue14638
         # Treat illegal (non-str) name like no name
-
         class A:
             __name__ = 42
         class B:
@@ -518,135 +518,6 @@ class PydocDocTest(unittest.TestCase):
         self.assertEqual(stripid("<type 'exceptions.Exception'>"),
                          "<type 'exceptions.Exception'>")
 
-    def test_builtin_with_more_than_four_children(self):
-        """Tests help on builtin object which have more than four child classes.
-
-        When running help() on a builtin class which has child classes, it
-        should contain a "Built-in subclasses" section and only 4 classes
-        should be displayed with a hint on how many more subclasses are present.
-        For example:
-
-        >>> help(object)
-        Help on class object in module builtins:
-
-        class object
-         |  The most base type
-         |
-         |  Built-in subclasses:
-         |      async_generator
-         |      BaseException
-         |      builtin_function_or_method
-         |      bytearray
-         |      ... and 82 other subclasses
-        """
-        doc = pydoc.TextDoc()
-        text = doc.docclass(object)
-        snip = (" |  Built-in subclasses:\n"
-                " |      async_generator\n"
-                " |      BaseException\n"
-                " |      builtin_function_or_method\n"
-                " |      bytearray\n"
-                " |      ... and \\d+ other subclasses")
-        self.assertRegex(text, snip)
-
-    def test_builtin_with_child(self):
-        """Tests help on builtin object which have only child classes.
-
-        When running help() on a builtin class which has child classes, it
-        should contain a "Built-in subclasses" section. For example:
-
-        >>> help(ArithmeticError)
-        Help on class ArithmeticError in module builtins:
-
-        class ArithmeticError(Exception)
-         |  Base class for arithmetic errors.
-         |
-         ...
-         |
-         |  Built-in subclasses:
-         |      FloatingPointError
-         |      OverflowError
-         |      ZeroDivisionError
-        """
-        doc = pydoc.TextDoc()
-        text = doc.docclass(ArithmeticError)
-        snip = (" |  Built-in subclasses:\n"
-                " |      FloatingPointError\n"
-                " |      OverflowError\n"
-                " |      ZeroDivisionError")
-        self.assertIn(snip, text)
-
-    def test_builtin_with_grandchild(self):
-        """Tests help on builtin classes which have grandchild classes.
-
-        When running help() on a builtin class which has child classes, it
-        should contain a "Built-in subclasses" section. However, if it also has
-        grandchildren, these should not show up on the subclasses section.
-        For example:
-
-        >>> help(Exception)
-        Help on class Exception in module builtins:
-
-        class Exception(BaseException)
-         |  Common base class for all non-exit exceptions.
-         |
-         ...
-         |
-         |  Built-in subclasses:
-         |      ArithmeticError
-         |      AssertionError
-         |      AttributeError
-         ...
-        """
-        doc = pydoc.TextDoc()
-        text = doc.docclass(Exception)
-        snip = (" |  Built-in subclasses:\n"
-                " |      ArithmeticError\n"
-                " |      AssertionError\n"
-                " |      AttributeError")
-        self.assertIn(snip, text)
-        # Testing that the grandchild ZeroDivisionError does not show up
-        self.assertNotIn('ZeroDivisionError', text)
-
-    def test_builtin_no_child(self):
-        """Tests help on builtin object which have no child classes.
-
-        When running help() on a builtin class which has no child classes, it
-        should not contain any "Built-in subclasses" section. For example:
-
-        >>> help(ZeroDivisionError)
-
-        Help on class ZeroDivisionError in module builtins:
-
-        class ZeroDivisionError(ArithmeticError)
-         |  Second argument to a division or modulo operation was zero.
-         |
-         |  Method resolution order:
-         |      ZeroDivisionError
-         |      ArithmeticError
-         |      Exception
-         |      BaseException
-         |      object
-         |
-         |  Methods defined here:
-         ...
-        """
-        doc = pydoc.TextDoc()
-        text = doc.docclass(ZeroDivisionError)
-        # Testing that the subclasses section does not appear
-        self.assertNotIn('Built-in subclasses', text)
-
-    def test_builtin_on_metaclasses(self):
-        """Tests help on metaclasses.
-
-        When running help() on a metaclasses such as type, it
-        should not contain any "Built-in subclasses" section.
-        """
-        doc = pydoc.TextDoc()
-        text = doc.docclass(type)
-        # Testing that the subclasses section does not appear
-        self.assertNotIn('Built-in subclasses', text)
-
     @unittest.skipIf(sys.flags.optimize >= 2,
                      'Docstrings are omitted with -O2 and above')
     @unittest.skipIf(hasattr(sys, 'gettrace') and sys.gettrace(),
@@ -687,16 +558,6 @@ class PydocDocTest(unittest.TestCase):
         finally:
             pydoc.getpager = getpager_old
 
-    def test_namedtuple_fields(self):
-        Person = namedtuple('Person', ['nickname', 'firstname'])
-        with captured_stdout() as help_io:
-            pydoc.help(Person)
-        helptext = help_io.getvalue()
-        self.assertIn("nickname", helptext)
-        self.assertIn("firstname", helptext)
-        self.assertIn("Alias for field number 0", helptext)
-        self.assertIn("Alias for field number 1", helptext)
-
     def test_namedtuple_public_underscore(self):
         NT = namedtuple('NT', ['abc', 'def'], rename=True)
         with captured_stdout() as help_io:
@@ -727,7 +588,7 @@ class PydocDocTest(unittest.TestCase):
         self.assertEqual(synopsis, expected)
 
     def test_synopsis_sourceless_empty_doc(self):
-        with os_helper.temp_cwd() as test_dir:
+        with test.support.temp_cwd() as test_dir:
             init_path = os.path.join(test_dir, 'foomod42.py')
             cached_path = importlib.util.cache_from_source(init_path)
             with open(init_path, 'w') as fobj:
@@ -743,12 +604,21 @@ class PydocDocTest(unittest.TestCase):
         self.assertEqual(pydoc.splitdoc(example_string),
                          ('I Am A Doc', '\nHere is my description'))
 
+    def test_is_object_or_method(self):
+        doc = pydoc.Doc()
+        # Bound Method
+        self.assertTrue(pydoc._is_some_method(doc.fail))
+        # Method Descriptor
+        self.assertTrue(pydoc._is_some_method(int.__add__))
+        # String
+        self.assertFalse(pydoc._is_some_method("I am not a method"))
+
     def test_is_package_when_not_package(self):
-        with os_helper.temp_cwd() as test_dir:
+        with test.support.temp_cwd() as test_dir:
             self.assertFalse(pydoc.ispackage(test_dir))
 
     def test_is_package_when_is_package(self):
-        with os_helper.temp_cwd() as test_dir:
+        with test.support.temp_cwd() as test_dir:
             init_path = os.path.join(test_dir, '__init__.py')
             open(init_path, 'w').close()
             self.assertTrue(pydoc.ispackage(test_dir))
@@ -1084,12 +954,6 @@ class TestDescriptions(unittest.TestCase):
         assert len(lines) >= 2
         return lines[2]
 
-    @staticmethod
-    def _get_summary_lines(o):
-        text = pydoc.plain(pydoc.render_doc(o))
-        lines = text.split('\n')
-        return '\n'.join(lines[2:])
-
     # these should include "self"
     def test_unbound_python_method(self):
         self.assertEqual(self._get_summary_line(textwrap.TextWrapper.wrap),
@@ -1105,6 +969,7 @@ class TestDescriptions(unittest.TestCase):
         t = textwrap.TextWrapper()
         self.assertEqual(self._get_summary_line(t.wrap),
             "wrap(text) method of textwrap.TextWrapper instance")
+
     def test_field_order_for_named_tuples(self):
         Person = namedtuple('Person', ['nickname', 'firstname', 'agegroup'])
         s = pydoc.render_doc(Person)
@@ -1134,198 +999,6 @@ class TestDescriptions(unittest.TestCase):
         self.assertEqual(self._get_summary_line(os.stat),
             "stat(path, *, dir_fd=None, follow_symlinks=True)")
 
-    @requires_docstrings
-    def test_staticmethod(self):
-        class X:
-            @staticmethod
-            def sm(x, y):
-                '''A static method'''
-                ...
-        self.assertEqual(self._get_summary_lines(X.__dict__['sm']),
-                         'sm(x, y)\n'
-                         '    A static method\n')
-        self.assertEqual(self._get_summary_lines(X.sm), """\
-sm(x, y)
-    A static method
-""")
-        self.assertIn("""
- |  Static methods defined here:
- |\x20\x20
- |  sm(x, y)
- |      A static method
-""", pydoc.plain(pydoc.render_doc(X)))
-
-    @requires_docstrings
-    def test_classmethod(self):
-        class X:
-            @classmethod
-            def cm(cls, x):
-                '''A class method'''
-                ...
-        self.assertEqual(self._get_summary_lines(X.__dict__['cm']),
-                         'cm(...)\n'
-                         '    A class method\n')
-        self.assertEqual(self._get_summary_lines(X.cm), """\
-cm(x) method of builtins.type instance
-    A class method
-""")
-        self.assertIn("""
- |  Class methods defined here:
- |\x20\x20
- |  cm(x) from builtins.type
- |      A class method
-""", pydoc.plain(pydoc.render_doc(X)))
-
-    @requires_docstrings
-    def test_getset_descriptor(self):
-        # Currently these attributes are implemented as getset descriptors
-        # in CPython.
-        self.assertEqual(self._get_summary_line(int.numerator), "numerator")
-        self.assertEqual(self._get_summary_line(float.real), "real")
-        self.assertEqual(self._get_summary_line(Exception.args), "args")
-        self.assertEqual(self._get_summary_line(memoryview.obj), "obj")
-
-    @requires_docstrings
-    def test_member_descriptor(self):
-        # Currently these attributes are implemented as member descriptors
-        # in CPython.
-        self.assertEqual(self._get_summary_line(complex.real), "real")
-        self.assertEqual(self._get_summary_line(range.start), "start")
-        self.assertEqual(self._get_summary_line(slice.start), "start")
-        self.assertEqual(self._get_summary_line(property.fget), "fget")
-        self.assertEqual(self._get_summary_line(StopIteration.value), "value")
-
-    @requires_docstrings
-    def test_slot_descriptor(self):
-        class Point:
-            __slots__ = 'x', 'y'
-        self.assertEqual(self._get_summary_line(Point.x), "x")
-
-    @requires_docstrings
-    def test_dict_attr_descriptor(self):
-        class NS:
-            pass
-        self.assertEqual(self._get_summary_line(NS.__dict__['__dict__']),
-                         "__dict__")
-
-    @requires_docstrings
-    def test_structseq_member_descriptor(self):
-        self.assertEqual(self._get_summary_line(type(sys.hash_info).width),
-                         "width")
-        self.assertEqual(self._get_summary_line(type(sys.flags).debug),
-                         "debug")
-        self.assertEqual(self._get_summary_line(type(sys.version_info).major),
-                         "major")
-        self.assertEqual(self._get_summary_line(type(sys.float_info).max),
-                         "max")
-
-    @requires_docstrings
-    def test_namedtuple_field_descriptor(self):
-        Box = namedtuple('Box', ('width', 'height'))
-        self.assertEqual(self._get_summary_lines(Box.width), """\
-    Alias for field number 0
-""")
-
-    @requires_docstrings
-    def test_property(self):
-        class Rect:
-            @property
-            def area(self):
-                '''Area of the rect'''
-                return self.w * self.h
-
-        self.assertEqual(self._get_summary_lines(Rect.area), """\
-    Area of the rect
-""")
-        self.assertIn("""
- |  area
- |      Area of the rect
-""", pydoc.plain(pydoc.render_doc(Rect)))
-
-    @requires_docstrings
-    def test_custom_non_data_descriptor(self):
-        class Descr:
-            def __get__(self, obj, cls):
-                if obj is None:
-                    return self
-                return 42
-        class X:
-            attr = Descr()
-
-        self.assertEqual(self._get_summary_lines(X.attr), """\
-<test.test_pydoc.TestDescriptions.test_custom_non_data_descriptor.<locals>.Descr object>""")
-
-        X.attr.__doc__ = 'Custom descriptor'
-        self.assertEqual(self._get_summary_lines(X.attr), """\
-<test.test_pydoc.TestDescriptions.test_custom_non_data_descriptor.<locals>.Descr object>
-    Custom descriptor
-""")
-
-        X.attr.__name__ = 'foo'
-        self.assertEqual(self._get_summary_lines(X.attr), """\
-foo(...)
-    Custom descriptor
-""")
-
-    @requires_docstrings
-    def test_custom_data_descriptor(self):
-        class Descr:
-            def __get__(self, obj, cls):
-                if obj is None:
-                    return self
-                return 42
-            def __set__(self, obj, cls):
-                1/0
-        class X:
-            attr = Descr()
-
-        self.assertEqual(self._get_summary_lines(X.attr), "")
-
-        X.attr.__doc__ = 'Custom descriptor'
-        self.assertEqual(self._get_summary_lines(X.attr), """\
-    Custom descriptor
-""")
-
-        X.attr.__name__ = 'foo'
-        self.assertEqual(self._get_summary_lines(X.attr), """\
-foo
-    Custom descriptor
-""")
-
-    def test_async_annotation(self):
-        async def coro_function(ign) -> int:
-            return 1
-
-        text = pydoc.plain(pydoc.plaintext.document(coro_function))
-        self.assertIn('async coro_function', text)
-
-        html = pydoc.HTMLDoc().document(coro_function)
-        self.assertIn(
-            'async <a name="-coro_function"><strong>coro_function',
-            html)
-
-    def test_async_generator_annotation(self):
-        async def an_async_generator():
-            yield 1
-
-        text = pydoc.plain(pydoc.plaintext.document(an_async_generator))
-        self.assertIn('async an_async_generator', text)
-
-        html = pydoc.HTMLDoc().document(an_async_generator)
-        self.assertIn(
-            'async <a name="-an_async_generator"><strong>an_async_generator',
-            html)
-
-    def test_html_for_https_links(self):
-        def a_fn_with_https_link():
-            """a link https://localhost/"""
-            pass
-
-        html = pydoc.HTMLDoc().document(a_fn_with_https_link)
-        self.assertIn(
-            '<a href="https://localhost/">https://localhost/</a>',
-            html
-        )
 
 class PydocServerTest(unittest.TestCase):
     """Tests for pydoc._start_server"""
@@ -1341,7 +1014,7 @@ class PydocServerTest(unittest.TestCase):
         self.assertIn('0.0.0.0', serverthread.docserver.address)
 
         starttime = time.monotonic()
-        timeout = test.support.SHORT_TIMEOUT
+        timeout = 1  #seconds
 
         while serverthread.serving:
             time.sleep(.01)
@@ -1376,11 +1049,17 @@ class PydocUrlHandlerTest(PydocBaseTest):
             ("topic?key=def", "Pydoc: KEYWORD def"),
             ("topic?key=STRINGS", "Pydoc: TOPIC STRINGS"),
             ("foobar", "Pydoc: Error - foobar"),
+            ("getfile?key=foobar", "Pydoc: Error - getfile?key=foobar"),
             ]
 
         with self.restrict_walk_packages():
             for url, title in requests:
                 self.call_url_handler(url, title)
+
+            path = string.__file__
+            title = "Pydoc: getfile " + path
+            url = "getfile?key=" + path
+            self.call_url_handler(url, title)
 
 
 class TestHelper(unittest.TestCase):
@@ -1571,7 +1250,7 @@ class TestInternalUtilities(unittest.TestCase):
                 self.assertIsNone(self._get_revised_path(trailing_argv0dir))
 
 
-@threading_helper.reap_threads
+@reap_threads
 def test_main():
     try:
         test.support.run_unittest(PydocDocTest,

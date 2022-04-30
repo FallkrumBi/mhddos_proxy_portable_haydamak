@@ -158,20 +158,14 @@ List comprehension element unpacking
     ...
     SyntaxError: iterable unpacking cannot be used in comprehension
 
-    >>> {**{} for a in [1]}
+Generator expression in function arguments
+
+    >>> list(*x for x in (range(5) for i in range(3)))
     Traceback (most recent call last):
     ...
-    SyntaxError: dict unpacking cannot be used in dict comprehension
-
-# Pegen is better here.
-# Generator expression in function arguments
-
-#     >>> list(*x for x in (range(5) for i in range(3)))
-#     Traceback (most recent call last):
-#     ...
-#         list(*x for x in (range(5) for i in range(3)))
-#                   ^
-#     SyntaxError: invalid syntax
+        list(*x for x in (range(5) for i in range(3)))
+                  ^
+    SyntaxError: invalid syntax
 
     >>> dict(**x for x in [{1:2}])
     Traceback (most recent call last):
@@ -242,27 +236,27 @@ Overridden parameters
     >>> f(x=5, **{'x': 3}, y=2)
     Traceback (most recent call last):
       ...
-    TypeError: test.test_unpack_ex.f() got multiple values for keyword argument 'x'
+    TypeError: f() got multiple values for keyword argument 'x'
 
     >>> f(**{'x': 3}, x=5, y=2)
     Traceback (most recent call last):
       ...
-    TypeError: test.test_unpack_ex.f() got multiple values for keyword argument 'x'
+    TypeError: f() got multiple values for keyword argument 'x'
 
     >>> f(**{'x': 3}, **{'x': 5}, y=2)
     Traceback (most recent call last):
       ...
-    TypeError: test.test_unpack_ex.f() got multiple values for keyword argument 'x'
+    TypeError: f() got multiple values for keyword argument 'x'
 
     >>> f(x=5, **{'x': 3}, **{'x': 2})
     Traceback (most recent call last):
       ...
-    TypeError: test.test_unpack_ex.f() got multiple values for keyword argument 'x'
+    TypeError: f() got multiple values for keyword argument 'x'
 
     >>> f(**{1: 3}, **{1: 5})
     Traceback (most recent call last):
       ...
-    TypeError: test.test_unpack_ex.f() got multiple values for keyword argument '1'
+    TypeError: f() keywords must be strings
 
 Unpacking non-sequence
 
@@ -314,17 +308,12 @@ Now some general starred expressions (all fail).
     >>> a, *b, c, *d, e = range(10) # doctest:+ELLIPSIS
     Traceback (most recent call last):
       ...
-    SyntaxError: multiple starred expressions in assignment
+    SyntaxError: two starred expressions in assignment
 
     >>> [*b, *c] = range(10) # doctest:+ELLIPSIS
     Traceback (most recent call last):
       ...
-    SyntaxError: multiple starred expressions in assignment
-
-    >>> a,*b,*c,*d = range(4) # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: multiple starred expressions in assignment
+    SyntaxError: two starred expressions in assignment
 
     >>> *a = range(10) # doctest:+ELLIPSIS
     Traceback (most recent call last):
@@ -345,31 +334,6 @@ Now some general starred expressions (all fail).
     Traceback (most recent call last):
       ...
     SyntaxError: can't use starred expression here
-
-    >>> (*x),y = 1, 2 # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: cannot use starred expression here
-
-    >>> (((*x))),y = 1, 2 # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: cannot use starred expression here
-
-    >>> z,(*x),y = 1, 2, 4 # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: cannot use starred expression here
-
-    >>> z,(*x) = 1, 2 # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: cannot use starred expression here
-
-    >>> ((*x),y) = 1, 2 # doctest:+ELLIPSIS
-    Traceback (most recent call last):
-      ...
-    SyntaxError: cannot use starred expression here
 
 Some size constraints (all fail.)
 

@@ -40,9 +40,8 @@ class Func:
 class Editor:
     '''Minimally imitate editor.EditorWindow class.
     '''
-    def __init__(self, flist=None, filename=None, key=None, root=None,
-                 text=None):  # Allow real Text with mock Editor.
-        self.text = text or Text()
+    def __init__(self, flist=None, filename=None, key=None, root=None):
+        self.text = Text()
         self.undo = UndoDelegator()
 
     def get_selection_indices(self):

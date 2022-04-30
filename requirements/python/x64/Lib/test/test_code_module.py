@@ -4,10 +4,9 @@ import unittest
 from textwrap import dedent
 from contextlib import ExitStack
 from unittest import mock
-from test.support import import_helper
+from test import support
 
-
-code = import_helper.import_module('code')
+code = support.import_module('code')
 
 
 class TestInteractiveConsole(unittest.TestCase):

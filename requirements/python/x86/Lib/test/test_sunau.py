@@ -119,6 +119,10 @@ class SunauULAWTest(SunauTest, unittest.TestCase):
         frames = byteswap(frames, 2)
 
 
+class SunauMiscTests(audiotests.AudioMiscTests, unittest.TestCase):
+    module = sunau
+
+
 class SunauLowLevelTest(unittest.TestCase):
 
     def test_read_bad_magic_number(self):

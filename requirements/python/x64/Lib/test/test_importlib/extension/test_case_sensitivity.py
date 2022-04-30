@@ -1,7 +1,7 @@
 from importlib import _bootstrap_external
-from test.support import os_helper
+from test import support
 import unittest
-import sys
+
 from .. import util
 
 importlib = util.import_importlib('importlib')
@@ -12,30 +12,28 @@ machinery = util.import_importlib('importlib.machinery')
 @util.case_insensitive_tests
 class ExtensionModuleCaseSensitivityTest(util.CASEOKTestBase):
 
-    def find_spec(self):
+    def find_module(self):
         good_name = util.EXTENSIONS.name
         bad_name = good_name.upper()
         assert good_name != bad_name
         finder = self.machinery.FileFinder(util.EXTENSIONS.path,
                                           (self.machinery.ExtensionFileLoader,
                                            self.machinery.EXTENSION_SUFFIXES))
-        return finder.find_spec(bad_name)
+        return finder.find_module(bad_name)
 
-    @unittest.skipIf(sys.flags.ignore_environment, 'ignore_environment flag was set')
     def test_case_sensitive(self):
-        with os_helper.EnvironmentVarGuard() as env:
+        with support.EnvironmentVarGuard() as env:
             env.unset('PYTHONCASEOK')
             self.caseok_env_changed(should_exist=False)
-            spec = self.find_spec()
-            self.assertIsNone(spec)
+            loader = self.find_module()
+            self.assertIsNone(loader)
 
-    @unittest.skipIf(sys.flags.ignore_environment, 'ignore_environment flag was set')
     def test_case_insensitivity(self):
-        with os_helper.EnvironmentVarGuard() as env:
+        with support.EnvironmentVarGuard() as env:
             env.set('PYTHONCASEOK', '1')
             self.caseok_env_changed(should_exist=True)
-            spec = self.find_spec()
-            self.assertTrue(spec)
+            loader = self.find_module()
+            self.assertTrue(hasattr(loader, 'load_module'))
 
 
 (Frozen_ExtensionCaseSensitivity,

@@ -11,11 +11,10 @@ Most methods calls are inherited from the Text widget; Pack, Grid and
 Place methods are redirected to the Frame widget however.
 """
 
-from tkinter import Frame, Text, Scrollbar, Pack, Grid, Place
-from tkinter.constants import RIGHT, LEFT, Y, BOTH
-
 __all__ = ['ScrolledText']
 
+from tkinter import Frame, Text, Scrollbar, Pack, Grid, Place
+from tkinter.constants import RIGHT, LEFT, Y, BOTH
 
 class ScrolledText(Text):
     def __init__(self, master=None, **kw):
@@ -50,7 +49,6 @@ def example():
     stext.pack(fill=BOTH, side=LEFT, expand=True)
     stext.focus_set()
     stext.mainloop()
-
 
 if __name__ == "__main__":
     example()

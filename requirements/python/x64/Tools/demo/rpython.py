@@ -22,16 +22,17 @@ def main():
         port = int(host[i+1:])
         host = host[:i]
     command = ' '.join(sys.argv[2:])
-    with socket(AF_INET, SOCK_STREAM) as s:
-        s.connect((host, port))
-        s.send(command.encode())
-        s.shutdown(SHUT_WR)
-        reply = b''
-        while True:
-            data = s.recv(BUFSIZE)
-            if not data:
-                break
-            reply += data
-        print(reply.decode(), end=' ')
+    s = socket(AF_INET, SOCK_STREAM)
+    s.connect((host, port))
+    s.send(command.encode())
+    s.shutdown(SHUT_WR)
+    reply = b''
+    while True:
+        data = s.recv(BUFSIZE)
+        if not data:
+            break
+        reply += data
+    print(reply.decode(), end=' ')
+    s.close()
 
 main()
