@@ -18,10 +18,16 @@
 
   ;Define name of the product
   !define PRODUCT "mhddos_proxy_portable"
+  !define PRODUCT_VERSION "1.0.3"
+  !define UNINSTALLER_NAME "uninstall"
   
   !define MHDDOS_PROXY_SRC "https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git"
   
+  !define MHDDOS_PROXY_BETA_SRC "https://github.com/0xffiber/mhddos_proxy.git"
+  
   !define MHDDOS_PROXY_DIR "$INSTDIR\mhddos_proxy"
+  
+  !define MHDDOS_PROXY_BETA_DIR "$INSTDIR\mhddos_proxy_beta"
   
   !define PYTHON_DIR "$INSTDIR\python"
   
@@ -30,10 +36,10 @@
   !define VCREDIST_DIR "$INSTDIR\vc_redist"
 
   ;Define the main name of the installer
-  Name "${PRODUCT}"
+  Name "${PRODUCT}_${PRODUCT_VERSION}"
 
   ;Define the directory where the installer should be saved
-  OutFile "output\${PRODUCT}.exe"
+  OutFile "output\${PRODUCT}_${PRODUCT_VERSION}.exe"
 
 
 
@@ -141,22 +147,33 @@ Section "mhddos_proxy"
   WriteRegStr HKLM "Software\${PRODUCT}" "" $INSTDIR
 
   ;Registry information for add/remove programs
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" '"$INSTDIR\uninstaller.exe"'
+  
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}_${PRODUCT_VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" '"$INSTDIR\${UNINSTALLER_NAME}.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" '"$INSTDIR\itarmy.ico",0'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "MHDDoS Proxy Portable"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "https://github.com/OleksandrBlack/mhddos_proxy_portable"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
+  WriteUninstaller "${UNINSTALLER_NAME}.exe"
+  ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
+  IntFmt $0 "0x%08X" $0
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "EstimatedSize" "$0"
 
   ;Create optional start menu shortcut for uninstaller and Main component
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  ;CreateShortCut "$SMPROGRAMS\${PRODUCT}\Main Component.lnk" "$INSTDIR\example_file_component_01.txt" "" "$INSTDIR\example_file_component_01.txt" 0
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\Uninstall ${PRODUCT}.lnk" "$INSTDIR\uninstaller.exe" "" "$INSTDIR\uninstaller.exe" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\ItArmy Attack.lnk" "$INSTDIR\runer.bat" "" "$INSTDIR\itarmy.ico" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\Uninstall ${PRODUCT}.lnk" "$INSTDIR\${UNINSTALLER_NAME}.exe" "" "$INSTDIR\${UNINSTALLER_NAME}.exe" 0
 
   ;Create uninstaller
-  WriteUninstaller "uninstaller.exe"
+  WriteUninstaller "${UNINSTALLER_NAME}.exe"
 
   FileOpen $9 uninstall_requirements.bat w
   FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
   FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip uninstall --yes -r requirements.txt$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe -m pip uninstall --yes -r requirements.txt$\r$\n"
   FileClose $9
 
@@ -201,10 +218,10 @@ Section
   FileWrite $9 "color 0A$\r$\n"
   FileWrite $9 "echo	Cheack Update mhddos_proxy$\r$\n"
   FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "echo	$\r$\n"
+  FileWrite $9 "echo	"OK"$\r$\n"
   FileWrite $9 "echo	Cheack requirements$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "echo	$\r$\n"
+  FileWrite $9 "echo	"OK"$\r$\n"
   FileWrite $9 "echo	Start Attak ItArmy Target$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
   FileClose $9
@@ -236,6 +253,45 @@ Section	;Clone mhddos_proxy repo and install requirements
   nsExec::Exec 'cmd /c "$INSTDIR\clone_from_source.bat"'
 
   Delete $INSTDIR\clone_from_source.bat
+
+SectionEnd
+
+
+Section	"mhddos_proxy_beta (feature-async)";Clone mhddos_proxy repo and install requirements
+
+  SetOutPath $INSTDIR
+
+  FileOpen $9 clone_beta_from_source.bat w
+  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
+  FileWrite $9 "CD $INSTDIR$\r$\n"
+  FileWrite $9 "START /W ${GIT_DIR}\git\git.exe clone -b feature-async ${MHDDOS_PROXY_BETA_SRC} ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install --upgrade pip$\r$\n"
+  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
+  FileClose $9
+ 
+  nsExec::Exec 'cmd /c "$INSTDIR\clone_beta_from_source.bat"'
+
+  Delete $INSTDIR\clone_beta_from_source.bat.bat
+
+
+  FileOpen $9 runer_beta.bat w
+  FileWrite $9 "@echo off$\r$\n"
+  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "color 0A$\r$\n"
+  FileWrite $9 "echo	Cheack Update mhddos_proxy_beta$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	Cheack requirements$\r$\n"
+  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	Start Attak ItArmy Target (BETA)$\r$\n"
+  FileWrite $9 "${PYTHON_DIR}\python.exe runer_beta.py --itarmy --debug$\r$\n"
+  FileClose $9
+  
+  CreateShortCut "$DESKTOP\ItArmy Attack BETA.lnk" "$INSTDIR\runer_beta.bat" "" "$INSTDIR\itarmy_beta.ico" 0
 
 SectionEnd
 
