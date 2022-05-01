@@ -4,6 +4,7 @@
   !include "MUI2.nsh"
   !include "x64.nsh"
   !include "LogicLib.nsh"
+  !include "FileFunc.nsh"
 
 
 ;--------------------------------
@@ -35,20 +36,32 @@
   
   !define VCREDIST_DIR "$INSTDIR\vc_redist"
 
+
+  ;Installer Version Information
+  VIAddVersionKey "ProductName" "${PRODUCT}"
+  VIAddVersionKey "CompanyName" "IT ARMY of Ukraine"
+  VIAddVersionKey "LegalCopyright" "Copyright ©2022 MHDDoS Proxy Portable"
+  VIAddVersionKey "FileDescription" "MHDDoS Proxy Portable"
+  VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
+  VIProductVersion "${PRODUCT_VERSION}.0"
+
   ;Define the main name of the installer
-  Name "${PRODUCT}_${PRODUCT_VERSION}"
+  Name "${PRODUCT}"
 
   ;Define the directory where the installer should be saved
-  OutFile "output\${PRODUCT}_${PRODUCT_VERSION}.exe"
+  OutFile "output\${PRODUCT}.exe"
 
 
 
   # set to default here, override in .onInit if on 64bit
   InstallDir "$APPDATA\${PRODUCT}"
 
-  ;Function .onInit
+Function .onInit
 
-  ;FunctionEnd
+FunctionEnd
+
+
+
 
 
   ;Request rights if you want to install the program to program files
@@ -97,7 +110,7 @@
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   
-  !define MUI_FINISHPAGE_RUN "$INSTDIR\runer.bat"
+  !define MUI_FINISHPAGE_RUN "$INSTDIR\runner.bat"
   !insertmacro MUI_PAGE_FINISH
 
   ;For the uninstaller
@@ -148,7 +161,7 @@ Section "mhddos_proxy"
 
   ;Registry information for add/remove programs
   
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}_${PRODUCT_VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" '"$INSTDIR\${UNINSTALLER_NAME}.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" '"$INSTDIR\itarmy.ico",0'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "MHDDoS Proxy Portable"
@@ -211,17 +224,17 @@ SectionEnd
 Section
   SetOutPath $INSTDIR
   
-  FileOpen $9 runer.bat w
+  FileOpen $9 runner.bat w
   FileWrite $9 "@echo off$\r$\n"
   FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
   FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
   FileWrite $9 "color 0A$\r$\n"
   FileWrite $9 "echo	Cheack Update mhddos_proxy$\r$\n"
   FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	OK$\r$\n"
   FileWrite $9 "echo	Cheack requirements$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	OK$\r$\n"
   FileWrite $9 "echo	Start Attak ItArmy Target$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
   FileClose $9
@@ -229,7 +242,7 @@ Section
 
   File "resources\itarmy.ico"
   
-  CreateShortCut "$DESKTOP\ItArmy Attack.lnk" "$INSTDIR\runer.bat" "" "$INSTDIR\itarmy.ico" 0
+  CreateShortCut "$DESKTOP\ItArmy Attack.lnk" "$INSTDIR\runner.bat" "" "$INSTDIR\itarmy.ico" 0
  
   
 SectionEnd
@@ -257,7 +270,7 @@ Section	;Clone mhddos_proxy repo and install requirements
 SectionEnd
 
 
-Section	"mhddos_proxy_beta (feature-async)";Clone mhddos_proxy repo and install requirements
+Section	"mhddos_proxy_beta (feature-async)";Clone mhddos_proxy_BETA repo and install requirements
 
   SetOutPath $INSTDIR
 
@@ -273,25 +286,27 @@ Section	"mhddos_proxy_beta (feature-async)";Clone mhddos_proxy repo and install 
  
   nsExec::Exec 'cmd /c "$INSTDIR\clone_beta_from_source.bat"'
 
-  Delete $INSTDIR\clone_beta_from_source.bat.bat
+  Delete $INSTDIR\clone_beta_from_source.bat
 
 
-  FileOpen $9 runer_beta.bat w
+  FileOpen $9 runner_beta.bat w
   FileWrite $9 "@echo off$\r$\n"
   FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
   FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
   FileWrite $9 "color 0A$\r$\n"
   FileWrite $9 "echo	Cheack Update mhddos_proxy_beta$\r$\n"
   FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	OK$\r$\n"
   FileWrite $9 "echo	Cheack requirements$\r$\n"
   FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "echo	"OK"$\r$\n"
+  FileWrite $9 "echo	OK$\r$\n"
   FileWrite $9 "echo	Start Attak ItArmy Target (BETA)$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe runer_beta.py --itarmy --debug$\r$\n"
+  FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
   FileClose $9
   
-  CreateShortCut "$DESKTOP\ItArmy Attack BETA.lnk" "$INSTDIR\runer_beta.bat" "" "$INSTDIR\itarmy_beta.ico" 0
+  File "resources\itarmy_beta.ico"
+  
+  CreateShortCut "$DESKTOP\ItArmy Attack BETA.lnk" "$INSTDIR\runner_beta.bat" "" "$INSTDIR\itarmy_beta.ico" 0
 
 SectionEnd
 
@@ -317,6 +332,7 @@ Section "Uninstall"
   RmDir  "$SMPROGRAMS\${PRODUCT}"
 
   Delete "$DESKTOP\ItArmy Attack.lnk"
+  Delete "$DESKTOP\ItArmy Attack BETA.lnk"
   
 
 
