@@ -255,8 +255,8 @@ Section ;RUNNER
   
   FileWrite $9 ":MAIN_INFO$\r$\n"
   FileWrite $9 "ECHO.$\r$\n"
-  FileWrite $9 "ECHO 1. Run ItArmy Attak$\r$\n"
-  FileWrite $9 "ECHO 2. Run ItArmy Attak BETA$\r$\n"
+  FileWrite $9 "ECHO 1. Run ItArmy Attack$\r$\n"
+  FileWrite $9 "ECHO 2. Run ItArmy Attack BETA$\r$\n"
   FileWrite $9 "set /p choice=Enter a number to start the action:$\r$\n"
   FileWrite $9 "if '%choice%'=='' ECHO '%choice%'  is not a valid option, please try again$\r$\n"
   FileWrite $9 "if '%choice%'=='1' goto MHDDOS_PROXY$\r$\n"
@@ -289,7 +289,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak ItArmy Target$\r$\n"
+  FileWrite $9 "ECHO Start Attack ItArmy Target$\r$\n"
   FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
@@ -301,7 +301,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak ItArmy Target BETA$\r$\n"
+  FileWrite $9 "ECHO Start Attack ItArmy Target BETA$\r$\n"
   FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
@@ -339,7 +339,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak Haydamaks TCP Target$\r$\n"
+  FileWrite $9 "ECHO Start Attack Haydamaks TCP Target$\r$\n"
   FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
  
@@ -351,7 +351,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak Haydamaks UDP Target$\r$\n"
+  FileWrite $9 "ECHO Start Attack Haydamaks UDP Target$\r$\n"
   FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
@@ -363,7 +363,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak Haydamaks TCP Target BETA$\r$\n"
+  FileWrite $9 "ECHO Start Attack Haydamaks TCP Target BETA$\r$\n"
   FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
@@ -375,7 +375,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attak Haydamaks UDP Target BETA$\r$\n"
+  FileWrite $9 "ECHO Start Attack Haydamaks UDP Target BETA$\r$\n"
   FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
   FileWrite $9 "goto END$\r$\n"
 
@@ -417,18 +417,18 @@ Section	"Proxy Finder (Help to find proxies for ItArmy of Ukraine)"
 SectionEnd
 
 ;Haydamaks
-Section	"Haydamaks Attak"
+Section	"Haydamaks Attack"
 
   SetOutPath $INSTDIR
   
   File "resources\haydamaks.ico"
   File "resources\haydamaks_beta.ico"
   
-  CreateShortCut "$DESKTOP\Haydamaks TCP Attak.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp" "$INSTDIR\haydamaks.ico" 0
-  CreateShortCut "$DESKTOP\Haydamaks UDP Attak.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp" "$INSTDIR\haydamaks.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks TCP Attack.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp" "$INSTDIR\haydamaks.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks UDP Attack.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp" "$INSTDIR\haydamaks.ico" 0
   
-  CreateShortCut "$DESKTOP\Haydamaks TCP Attak BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp_beta" "$INSTDIR\haydamaks_beta.ico" 0
-  CreateShortCut "$DESKTOP\Haydamaks UDP Attak BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks TCP Attack BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks UDP Attack BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp_beta" "$INSTDIR\haydamaks_beta.ico" 0
 
 SectionEnd
 
@@ -457,10 +457,10 @@ Section "Uninstall"
   
   Delete "$DESKTOP\Proxy Finder (ItArmy of Ukraine).lnk"
   
-  Delete "$DESKTOP\Haydamaks TCP Attak.lnk"
-  Delete "$DESKTOP\Haydamaks UDP Attak.lnk"
-  Delete "$DESKTOP\Haydamaks TCP Attak BETA.lnk"
-  Delete "$DESKTOP\Haydamaks UDP Attak BETA.lnk"
+  Delete "$DESKTOP\Haydamaks TCP Attack.lnk"
+  Delete "$DESKTOP\Haydamaks UDP Attack.lnk"
+  Delete "$DESKTOP\Haydamaks TCP Attack BETA.lnk"
+  Delete "$DESKTOP\Haydamaks UDP Attack BETA.lnk"
 
 
 SectionEnd
