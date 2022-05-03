@@ -19,7 +19,7 @@
 
   ;Define name of the product
   !define PRODUCT "mhddos_proxy_portable"
-  !define PRODUCT_VERSION "1.0.4"
+  !define PRODUCT_VERSION "1.0.5"
   !define UNINSTALLER_NAME "uninstall"
   
   !define MHDDOS_PROXY_SRC "https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git"
