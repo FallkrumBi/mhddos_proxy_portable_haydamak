@@ -17,9 +17,11 @@
   SetDatablockOptimize ON
 
   ;Define name of the product
-  !define PRODUCT "mhddos_proxy_portable"
-  !define PRODUCT_VERSION "1.0.6"
+  !define PRODUCT "mhddos_proxy_installer"
+  !define PRODUCT_VERSION "1.0.7"
   !define UNINSTALLER_NAME "uninstall"
+  
+  BrandingText "${PRODUCT} ${PRODUCT_VERSION}"
   
   !define MHDDOS_PROXY_SRC "https://github.com/porthole-ascend-cinnamon/mhddos_proxy.git"
   
@@ -27,11 +29,11 @@
   
   !define MHDDOS_PROXY_BETA_DIR "$INSTDIR\mhddos_proxy_beta"
   
-  !define PYTHON_DIR "$INSTDIR\python"
+  !define MHDDOS_PROXY_ENV "$APPDATA\mhddos_proxy_env"
   
-  !define GIT_DIR "$INSTDIR\git\git"
+  !define PYTHON_DIR "${MHDDOS_PROXY_ENV}\python"
   
-  !define VCREDIST_DIR "$INSTDIR\vc_redist"
+  !define GIT_DIR "${MHDDOS_PROXY_ENV}\git\git"
   
   !define haydamaks_tcp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_tcp.txt"
   !define haydamaks_udp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_udp.txt"
@@ -44,8 +46,8 @@
   ;Installer Version Information
   VIAddVersionKey "ProductName" "${PRODUCT}"
   VIAddVersionKey "CompanyName" "IT ARMY of Ukraine"
-  VIAddVersionKey "LegalCopyright" "Copyright ©2022 MHDDoS Proxy Portable"
-  VIAddVersionKey "FileDescription" "MHDDoS Proxy Portable"
+  VIAddVersionKey "LegalCopyright" "Copyright ©2022 MHDDoS Proxy Installer"
+  VIAddVersionKey "FileDescription" "MHDDoS Proxy Installer"
   VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
   VIProductVersion "${PRODUCT_VERSION}.0"
 
@@ -99,15 +101,15 @@
 
 ;--------------------------------
 ;Pages
-
   ;For the installer
   !insertmacro MUI_PAGE_WELCOME # simply remove this and other pages if you don't want it
+  
+  Page Custom win7_info
+  
   !insertmacro MUI_PAGE_LICENSE "LICENSE" # link to an ANSI encoded license file
   !insertmacro MUI_PAGE_COMPONENTS # remove if you don't want to list components
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
-  
-  ;!define MUI_FINISHPAGE_RUN "$INSTDIR\runner.bat"
   !insertmacro MUI_PAGE_FINISH
 
   ;For the uninstaller

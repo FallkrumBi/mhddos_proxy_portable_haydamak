@@ -20,3 +20,9 @@ LangString inst_haydamaks_req ${LANG_ENGLISH} "Haydamaks Attack"
 
 ;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
 LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
+
+LangString inf_title ${LANG_ENGLISH} "Checking dependencies"
+LangString inf_subtitle ${LANG_ENGLISH} "Read Before Installation"
+LangString inf_button ${LANG_ENGLISH} "Download"
+LangString inf_lable_1 ${LANG_ENGLISH} "	To run mhddos_proxy_installer on Windows 7, you need to install the latest updates."
+LangString inf_lable_2 ${LANG_ENGLISH} "Please download and run the UpdatePack7R2 utility to quickly update Windows 7 automatically."

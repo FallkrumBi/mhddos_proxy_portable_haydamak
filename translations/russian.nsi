@@ -20,3 +20,9 @@ LangString inst_haydamaks_req ${LANG_RUSSIAN} "Атака Гайдамаков"
 
 ;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
 LangString inst_haydamaks_beta_req ${LANG_RUSSIAN} "Атака Гайдамаков (BETA)"
+
+LangString inf_title ${LANG_RUSSIAN} "Проверка зависимостей"
+LangString inf_subtitle ${LANG_RUSSIAN} "Прочтите перед установкой"
+LangString inf_button ${LANG_RUSSIAN} "Скачать"
+LangString inf_lable_1 ${LANG_RUSSIAN} "	Для запуска mhddos_proxy_installer в операционной системе Windows 7 необходимо установить последние обновления."
+LangString inf_lable_2 ${LANG_RUSSIAN} "Пожалуйста скачайте и запустите утилиту UpdatePack7R2 для быстрого автоматичиского обновления Windows 7."

@@ -11,6 +11,9 @@ Section "Uninstall"
   RMDir /r "$INSTDIR\*.*"
   RMDir "$INSTDIR"
 
+  RMDir /r "${MHDDOS_PROXY_ENV}\*.*"
+  RMDir "${MHDDOS_PROXY_ENV}"
+
   ;Delete Start Menu Shortcuts
   Delete "$SMPROGRAMS\${PRODUCT}\*.*"
   RmDir  "$SMPROGRAMS\${PRODUCT}"

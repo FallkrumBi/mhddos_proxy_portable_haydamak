@@ -2,7 +2,7 @@ Var uninstallerPath
 
 Section "-hidden"
 
-    ;Search if mhddos_proxy_portable is already installed.
+    ;Search if mhddos_proxy_installer is already installed.
     FindFirst $0 $1 "$uninstallerPath\${UNINSTALLER_NAME}.exe"
     FindClose $0
     StrCmp $1 "" done
@@ -17,27 +17,43 @@ Section "-hidden"
 
 SectionEnd
 
-;Installer Section
+Var info_down_btn
+Var info_label_1
+Var info_label_2
+Var info_font
 
-Section ;Visual C++ Redistributable 2015-2022
-	SetOutPath ${VCREDIST_DIR}
+Function win7_info
+${If} ${IsWin7}
+  ; custom font definitions
+  CreateFont $info_font "Microsoft Sans Serif" "9.75" "700"
+  
+  ; === info (type: Dialog) ===
+  nsDialogs::Create 1018
+  Pop $0
 	
-	${If} ${IsWin7} ; patch for windows 7
-		${If} ${RunningX64}
-			File /r "requirements\vc_redist\vc_redist.x64.exe"
-		${Else}
-			File /r "requirements\vc_redist\vc_redist.x86.exe"
-		${EndIf}
+  !insertmacro MUI_HEADER_TEXT $(inf_title) $(inf_subtitle)
+  
+  ; === down_btn (type: Button) ===
+  ${NSD_CreateButton} 217u 106u 64u 15u $(inf_button)
+  Pop $info_down_btn
+  ${NSD_OnClick} $info_down_btn download_updater
+  
+  ; === label_1 (type: Label) ===
+  ${NSD_CreateLabel} 8u 20u 280u 28u $(inf_lable_1)
+  Pop $info_label_1
+  SendMessage $info_label_1 ${WM_SETFONT} $info_font 0
+  
+  ; === label_2 (type: Label) ===
+  ${NSD_CreateLabel} 8u 71u 273u 22u $(inf_lable_2)
+  Pop $info_label_2
+  
+	nsDialogs::Show
+${EndIf}
+FunctionEnd
 
-		${If} ${RunningX64}
-			ExecWait 'vc_redist.x64.exe /q /norestart' $0
-			DetailPrint "-- vc_redist.x64.exe runtime exit code = '$0'"
-		${Else}
-			ExecWait 'vc_redist.x86.exe /q /norestart' $0
-			DetailPrint "-- vc_redist.x86.exe runtime exit code = '$0'"
-		${EndIf}
-	${EndIf}
-SectionEnd
+Function download_updater
+    ExecShell "open" "https://update7.simplix.info/UpdatePack7R2.exe" 
+FunctionEnd
 
 Section
   SectionIn RO # Just means if in component mode this is locked
@@ -53,8 +69,8 @@ Section
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" '"$INSTDIR\${UNINSTALLER_NAME}.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" '"$INSTDIR\itarmy.ico",0'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "MHDDoS Proxy Portable"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "https://github.com/OleksandrBlack/mhddos_proxy_portable"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "MHDDoS Proxy Installer"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "https://github.com/OleksandrBlack/mhddos_proxy_installer"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "NoRepair" 1
@@ -267,19 +283,6 @@ Section	"mhddos_proxy_beta (feature-async)";INSTALL MHDDOS_PROXY_BETA
   
 SectionEnd
 
-;Proxy Finder
-Section	$(inst_pf_req)
-
-  SetOutPath $INSTDIR
-  
-  File "resources\itarmy_proxy.ico"
-  
-  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_proxy_finder"'
-  
-  CreateShortCut "$DESKTOP\$(inst_pf_req).lnk" "$INSTDIR\runner.bat" "-proxy_finder" "$INSTDIR\itarmy_proxy.ico" 0
-
-SectionEnd
-
 ;ItArmy
 Section	$(inst_itarmy_req) ;"ItArm y of Ukraine Attack"
 
@@ -302,8 +305,21 @@ Section	$(inst_itarmy_beta_req) ;"ItArmy of Ukraine Attack BETA"
 
 SectionEnd
 
+;Proxy Finder
+Section	/o	$(inst_pf_req)
+
+  SetOutPath $INSTDIR
+  
+  File "resources\itarmy_proxy.ico"
+  
+  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_proxy_finder"'
+  
+  CreateShortCut "$DESKTOP\$(inst_pf_req).lnk" "$INSTDIR\runner.bat" "-proxy_finder" "$INSTDIR\itarmy_proxy.ico" 0
+
+SectionEnd
+
 ;Haydamaks
-Section	$(inst_haydamaks_req)
+Section	/o	$(inst_haydamaks_req)
 
   SetOutPath $INSTDIR
   
@@ -315,7 +331,7 @@ Section	$(inst_haydamaks_req)
 SectionEnd
 
 ;Haydamaks BETA
-Section	$(inst_haydamaks_beta_req)
+Section	/o	$(inst_haydamaks_beta_req)
 
   SetOutPath $INSTDIR
   
@@ -332,7 +348,7 @@ Function .onInit
   !insertmacro MUI_LANGDLL_DISPLAY
 
 
-  ;Search if mhddos_proxy_portable is already installed.
+  ;Search if mhddos_proxy_installer is already installed.
   FindFirst $0 $1 "$INSTDIR\${UNINSTALLER_NAME}.exe"
   FindClose $0
   StrCmp $1 "" done
