@@ -68,7 +68,7 @@ Section
   
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayName" "${PRODUCT}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "UninstallString" '"$INSTDIR\${UNINSTALLER_NAME}.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" '"$INSTDIR\itarmy.ico",0'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayIcon" '"$INSTDIR\haydamaks.ico",0'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "Publisher" "MHDDoS Proxy Installer"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "URLInfoAbout" "https://github.com/OleksandrBlack/mhddos_proxy_installer"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT}" "DisplayVersion" "${PRODUCT_VERSION}"
@@ -117,16 +117,11 @@ Section ;RUNNER
   
   FileWrite $9 ":MAIN$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='' goto MAIN_INFO)$\r$\n"
-  FileWrite $9 ":RUN_MHDDOS_PROXY$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-itarmy' goto ITARMY)$\r$\n"
-  FileWrite $9 ":RUN_MHDDOS_PROXY_BETA$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-itarmy_beta' goto ITARMY_BETA)$\r$\n"
+
   FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy' goto CLONE_MHDDOS_PROXY)$\r$\n"
   FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY_BETA$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy_beta' goto CLONE_MHDDOS_PROXY_BETA)$\r$\n"
-  FileWrite $9 ":RUN_UNINSTALL$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-uninstall' goto UNINSTALL)$\r$\n"
   
   FileWrite $9 ":run_clone_proxy_finder$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_proxy_finder' goto clone_proxy_finder)$\r$\n"
@@ -144,12 +139,12 @@ Section ;RUNNER
   
   FileWrite $9 ":MAIN_INFO$\r$\n"
   FileWrite $9 "ECHO.$\r$\n"
-  FileWrite $9 "ECHO 1. Run ItArmy Attack$\r$\n"
-  FileWrite $9 "ECHO 2. Run ItArmy Attack BETA$\r$\n"
+  FileWrite $9 "ECHO 1. Run Haydamaks TCP Attack$\r$\n"
+  FileWrite $9 "ECHO 2. Run Haydamaks UDP Attack$\r$\n"
   FileWrite $9 "set /p choice=Enter a number to start the action:$\r$\n"
   FileWrite $9 "if '%choice%'=='' ECHO '%choice%'  is not a valid option, please try again$\r$\n"
-  FileWrite $9 "if '%choice%'=='1' goto ITARMY$\r$\n"
-  FileWrite $9 "if '%choice%'=='2' goto ITARMY_BETA$\r$\n"
+  FileWrite $9 "if '%choice%'=='1' goto haydamaks_tcp$\r$\n"
+  FileWrite $9 "if '%choice%'=='2' goto haydamaks_udp$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
   FileWrite $9 ":CLONE_MHDDOS_PROXY$\r$\n"
@@ -170,30 +165,6 @@ Section ;RUNNER
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
-  FileWrite $9 ":ITARMY$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
-  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Cheack requirements$\r$\n"
-  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attack ItArmy Target$\r$\n"
-  FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
-  FileWrite $9 "goto END$\r$\n"
-  
-  FileWrite $9 ":ITARMY_BETA$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Cheack requirements$\r$\n"
-  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attack ItArmy Target BETA$\r$\n"
-  FileWrite $9 "python runner.py --itarmy --debug$\r$\n"
-  FileWrite $9 "goto END$\r$\n"
-  
   FileWrite $9 ":clone_proxy_finder$\r$\n"
   FileWrite $9 "CD $INSTDIR$\r$\n"
   FileWrite $9 "git clone ${proxy_finder_src} ${proxy_finder_dir}$\r$\n"
@@ -210,7 +181,7 @@ Section ;RUNNER
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Proxy Finder (ItArmy)$\r$\n"
+  FileWrite $9 "ECHO Start Proxy Finder (mhddos_proxy)$\r$\n"
   FileWrite $9 "python finder.py$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
@@ -283,28 +254,6 @@ Section	"mhddos_proxy_beta (feature-async)";INSTALL MHDDOS_PROXY_BETA
   
 SectionEnd
 
-;ItArmy
-Section	$(inst_itarmy_req) ;"ItArm y of Ukraine Attack"
-
-  SetOutPath $INSTDIR
-  
-  File "resources\itarmy.ico"
-  
-  CreateShortCut "$DESKTOP\$(inst_itarmy_req).lnk" "$INSTDIR\runner.bat" "-itarmy" "$INSTDIR\itarmy.ico" 0
-
-SectionEnd
-
-;ItArmy BETA
-Section	$(inst_itarmy_beta_req) ;"ItArmy of Ukraine Attack BETA"
-
-  SetOutPath $INSTDIR
-  
-  File "resources\itarmy_beta.ico"
-  
-  CreateShortCut "$DESKTOP\$(inst_itarmy_beta_req).lnk" "$INSTDIR\runner.bat" "-itarmy_beta" "$INSTDIR\itarmy_beta.ico" 0
-
-SectionEnd
-
 ;Proxy Finder
 Section	/o	$(inst_pf_req)
 
@@ -319,7 +268,7 @@ Section	/o	$(inst_pf_req)
 SectionEnd
 
 ;Haydamaks
-Section	/o	$(inst_haydamaks_req)
+Section	$(inst_haydamaks_req)
 
   SetOutPath $INSTDIR
   
@@ -331,7 +280,7 @@ Section	/o	$(inst_haydamaks_req)
 SectionEnd
 
 ;Haydamaks BETA
-Section	/o	$(inst_haydamaks_beta_req)
+Section	$(inst_haydamaks_beta_req)
 
   SetOutPath $INSTDIR
   

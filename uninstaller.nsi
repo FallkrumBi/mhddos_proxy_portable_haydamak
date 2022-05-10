@@ -17,9 +17,6 @@ Section "Uninstall"
   ;Delete Start Menu Shortcuts
   Delete "$SMPROGRAMS\${PRODUCT}\*.*"
   RmDir  "$SMPROGRAMS\${PRODUCT}"
-
-  Delete "$DESKTOP\$(inst_itarmy_req).lnk"
-  Delete "$DESKTOP\$(inst_itarmy_beta_req).lnk"
   
   Delete "$DESKTOP\$(inst_pf_req).lnk"
   

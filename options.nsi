@@ -17,8 +17,8 @@
   SetDatablockOptimize ON
 
   ;Define name of the product
-  !define PRODUCT "mhddos_proxy_installer"
-  !define PRODUCT_VERSION "1.0.7"
+  !define PRODUCT "haydamaks_installer"
+  !define PRODUCT_VERSION "1.0.0"
   !define UNINSTALLER_NAME "uninstall"
   
   BrandingText "${PRODUCT} ${PRODUCT_VERSION}"
@@ -45,9 +45,9 @@
 
   ;Installer Version Information
   VIAddVersionKey "ProductName" "${PRODUCT}"
-  VIAddVersionKey "CompanyName" "IT ARMY of Ukraine"
-  VIAddVersionKey "LegalCopyright" "Copyright ©2022 MHDDoS Proxy Installer"
-  VIAddVersionKey "FileDescription" "MHDDoS Proxy Installer"
+  VIAddVersionKey "CompanyName" "Haydamaks"
+  VIAddVersionKey "LegalCopyright" "Copyright ©2022 Haydamaks Installer"
+  VIAddVersionKey "FileDescription" "Haydamaks Installer"
   VIAddVersionKey "FileVersion" "${PRODUCT_VERSION}"
   VIProductVersion "${PRODUCT_VERSION}.0"
 
@@ -55,7 +55,7 @@
   Name "${PRODUCT}"
 
   ;Define the directory where the installer should be saved
-  OutFile "output\${PRODUCT}.exe"
+  OutFile "${PRODUCT}.exe"
 
 
 
@@ -87,7 +87,7 @@
   !define MUI_LANGDLL_ALLLANGUAGES
 
   ;Use optional a custom icon:
-  !define MUI_ICON "resources\itarmy.ico" # for the Installer
+  !define MUI_ICON "resources\haydamaks.ico" # for the Installer
   !define MUI_UNICON "resources\icon_uninstaller.ico" # for the later created UnInstaller
 
   ;Use optional a custom picture for the 'Welcome' and 'Finish' page:
