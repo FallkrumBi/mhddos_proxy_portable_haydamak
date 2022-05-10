@@ -1,1 +1,1 @@
-# mhddos_proxy_portable
+# mhddos_proxy_installer
