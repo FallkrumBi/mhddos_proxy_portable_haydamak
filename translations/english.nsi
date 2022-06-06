@@ -13,7 +13,7 @@ LangString inst_pf_req ${LANG_ENGLISH} "Proxy Finder (Find proxies for mhddos_pr
 LangString inst_haydamaks_req ${LANG_ENGLISH} "Haydamaks Attack"
 
 ;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
-LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
+;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
 
 LangString inf_title ${LANG_ENGLISH} "Checking dependencies"
 LangString inf_subtitle ${LANG_ENGLISH} "Read Before Installation"

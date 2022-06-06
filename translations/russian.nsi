@@ -13,7 +13,7 @@ LangString inst_pf_req ${LANG_RUSSIAN} "Искатель Прокси (Иска�
 LangString inst_haydamaks_req ${LANG_RUSSIAN} "Атака Гайдамаков"
 
 ;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
-LangString inst_haydamaks_beta_req ${LANG_RUSSIAN} "Атака Гайдамаков (BETA)"
+;LangString inst_haydamaks_beta_req ${LANG_RUSSIAN} "Атака Гайдамаков (BETA)"
 
 LangString inf_title ${LANG_RUSSIAN} "Проверка зависимостей"
 LangString inf_subtitle ${LANG_RUSSIAN} "Прочтите перед установкой"

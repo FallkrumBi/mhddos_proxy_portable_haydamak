@@ -13,7 +13,7 @@ LangString inst_pf_req ${LANG_UKRAINIAN} "Шукач Проксі (Шукати 
 LangString inst_haydamaks_req ${LANG_UKRAINIAN} "Атака Гайдамаків"
 
 ;LangString inst_haydamaks_beta_req ${LANG_ENGLISH} "Haydamaks Attack (BETA)"
-LangString inst_haydamaks_beta_req ${LANG_UKRAINIAN} "Атака Гайдамаків (BETA)"
+;LangString inst_haydamaks_beta_req ${LANG_UKRAINIAN} "Атака Гайдамаків (BETA)"
 
 LangString inf_title ${LANG_UKRAINIAN} "Перевірка залежностей"
 LangString inf_subtitle ${LANG_UKRAINIAN} "Прочитайте перед встановленням"

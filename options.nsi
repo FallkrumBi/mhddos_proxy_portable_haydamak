@@ -18,7 +18,7 @@
 
   ;Define name of the product
   !define PRODUCT "haydamaks_installer"
-  !define PRODUCT_VERSION "1.0.0"
+  !define PRODUCT_VERSION "1.0.1"
   !define UNINSTALLER_NAME "uninstall"
   
   BrandingText "${PRODUCT} ${PRODUCT_VERSION}"
@@ -27,7 +27,7 @@
   
   !define MHDDOS_PROXY_DIR "$INSTDIR\mhddos_proxy"
   
-  !define MHDDOS_PROXY_BETA_DIR "$INSTDIR\mhddos_proxy_beta"
+;  !define MHDDOS_PROXY_BETA_DIR "$INSTDIR\mhddos_proxy_beta"
   
   !define MHDDOS_PROXY_ENV "$APPDATA\mhddos_proxy_env"
   
@@ -37,6 +37,7 @@
   
   !define haydamaks_tcp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_tcp.txt"
   !define haydamaks_udp_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_udp.txt"
+  !define haydamaks_l7_target "-c http://goals.ddosukraine.com.ua/haydamaky/targets_http.txt"
   
   !define proxy_finder_src "https://github.com/porthole-ascend-cinnamon/proxy_finder.git"
   !define proxy_finder_dir "$INSTDIR\proxy_finder"
